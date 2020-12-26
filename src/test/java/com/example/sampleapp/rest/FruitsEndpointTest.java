@@ -51,7 +51,8 @@ public class FruitsEndpointTest {
         //List all, cherry should be missing now:
         given()
                 .when().get("/fruits")
-                .then().log().body()
+                .then()
+                // .log().body()
                 .statusCode(200)
                 .body(
                         not(containsString("Cherry")),
@@ -82,7 +83,8 @@ public class FruitsEndpointTest {
         //List all, cherry should be missing now:
         given()
                 .when().get("/fruits")
-                .then().log().body()
+                .then()
+                // .log().body()
                 .statusCode(200)
                 .body(
                         containsString("Red Cherry"),

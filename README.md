@@ -49,6 +49,7 @@ pom.xmlには以下のような依存関係が定義されています。
     </dependency>
   </dependencies>
 ```
+quarkus-junit5はテストフレームワークを制御する@QuarkusTestアノテーションを提供しているので、テストには必須です。rest-assuredは必須ではありませんが、HTTPエンドポイントをテストするのに便利であり、統合によりURLを自動設定する機能を提供します。
 
 ## 実行確認
 サンプルアプリのソースコードです。
@@ -164,6 +165,7 @@ public class HelloResourceTest {
 ```
 
 Quarkusアプリ（API）がテスト時に起動し、テストが実施されました。
+起動時のPortはREST-Assured統合により自動設定されます。（デフォルト8081）プロパティで変更することも可能です。
 
 ## REST-Assuredによるテスト
 
@@ -917,3 +919,172 @@ Content-Type: application/json
 [INFO] Finished at: 2020-12-26T22:12:00+09:00
 [INFO] ------------------------------------------------------------------------
 ```
+
+## 外部APIを呼び出すQuarkusアプリのテスト
+
+### サンプルアプリの追加
+以下のソースファイルを追加します。
+- [GreetingResource.java](./src/main/java/com/example/sampleapp/rest/GreetingResource.java)
+- [GreetingService.java](./src/main/java/com/example/sampleapp/rest/GreetingService.java)
+- [GreetingExtResource.java](./src/main/java/com/example/sampleapp/external/GreetingExtResource.java) (これが外部API相当のリソースです)
+
+Extensionを追加します。
+```
+$ mvn quarkus:add-extensions -Dextensions="rest-client"
+```
+
+GreetingResourceはMicroProfile RestClientのクライアントインターフェースとして以下のように定義されたGreetingServiceを経由してGreetingExtResourceを呼び出します。
+```java
+@Path("/")
+@ApplicationScoped
+@RegisterRestClient(baseUri = "http://localhost:8080/")
+public interface GreetingService {
+
+    @GET
+    @Path("/helloext")
+    @Produces(MediaType.TEXT_PLAIN)
+    String hello();
+}
+```
+通常のDEVモードでQuarkusアプリを起動して確認してみます。
+```
+$ mvn compile quarkus:dev
+...
+```
+```
+$ curl http://localhost:8080/greeting/test 
+Hello test
+```
+
+### テストの追加
+以下のテストを追加します。
+- [GreetingResourceTest.java](./src/test/java/com/example/sampleapp/rest/GreetingResourceTest.java)
+
+先ほどの確認と同じ内容です。
+```java
+    @Test
+    public void testHelloEndpoint() {
+
+        given()
+          .when().get("/greeting/test")
+          .then()
+             .statusCode(200)
+             .body(is("Hello test"));
+    }
+```
+テストを実行します。
+出力がわかりにくくなったので他のテストの出力は一旦止めておきます。
+
+まずDEVモードで起動します。これは外部APIとして動作させるためです。
+```
+$ mvn compile quarkus:dev
+...
+```
+
+このまま別のコンソールでテストを実行します。
+```
+$ [INFO] -------------------------------------------------------
+[INFO]  T E S T S
+[INFO] -------------------------------------------------------
+[INFO] Running com.example.sampleapp.rest.FruitsEndpointTest
+2020-12-27 01:25:55,280 WARN  [io.qua.config] (main) Unrecognized configuration key "quarkus.http.test-timeout" was provided; it will be ignored; verify that the dependency extension for this configuration is set or you did not make a typo
+2020-12-27 01:25:57,215 INFO  [io.quarkus] (main) Quarkus 1.7.5.Final-redhat-00011 on JVM started in 4.440s. Listening on: http://0.0.0.0:8081
+2020-12-27 01:25:57,215 INFO  [io.quarkus] (main) Profile test activated. 
+2020-12-27 01:25:57,216 INFO  [io.quarkus] (main) Installed features: [agroal, cdi, hibernate-orm, jdbc-h2, mutiny, narayana-jta, rest-client, resteasy, resteasy-jackson, resteasy-jsonb, smallrye-context-propagation]
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 7.406 s - in com.example.sampleapp.rest.FruitsEndpointTest
+[INFO] Running com.example.sampleapp.rest.GreetingResourceTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.232 s - in com.example.sampleapp.rest.GreetingResourceTest
+[INFO] Running com.example.sampleapp.rest.HelloResourceTest
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.689 s - in com.example.sampleapp.rest.HelloResourceTest
+2020-12-27 01:26:00,627 INFO  [io.quarkus] (main) Quarkus stopped in 0.043s
+[INFO] 
+[INFO] Results:
+[INFO]
+[INFO] Tests run: 8, Failures: 0, Errors: 0, Skipped: 0
+[INFO]
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  15.391 s
+[INFO] Finished at: 2020-12-27T01:26:00+09:00
+[INFO] ------------------------------------------------------------------------
+```
+テストが成功しました。DEVモード側も停止してください。
+
+### 外部APIをMockする
+外部API（GreetingExtResource）の実行をMockに置き換えてみます。
+
+以下のソースファイルをテストと同じフォルダに追加します。
+-[GreetingMockService.java](./src/test/java/com/example/sampleapp/rest/GreetingMockService.java)
+
+これがGreetingServiceのMockとなります。戻り値のStringを変えてあります。
+```java
+@RestClient
+@ApplicationScoped
+public class GreetingMockService implements GreetingService{
+
+    @Override
+    public String hello() {
+        System.out.println("called mock service");
+        return "Hi ";
+    }
+    
+}
+```
+
+テスト（GreetingResourceTest）を以下のように変更します。検証用の想定結果も変更してあります。
+```java
+@QuarkusTest
+public class GreetingResourceTest {
+
+    @Inject
+    @RestClient
+    GreetingService greetingService;
+
+    @Test
+    public void testHelloEndpoint() {
+
+        QuarkusMock.installMockForInstance(new GreetingMockService(), greetingService);
+
+        given()
+          .when().get("/greeting/test")
+          .then()
+             .statusCode(200)
+            //  .body(is("Hello test"));
+            .body(is("Hi test"));
+    }
+
+```
+
+テストを実行します。別コンソールでのDEVモードでの起動は不要です。
+```
+$ mvn test
+...
+[INFO] -------------------------------------------------------
+[INFO]  T E S T S
+[INFO] -------------------------------------------------------
+[INFO] Running com.example.sampleapp.rest.FruitsEndpointTest
+2020-12-27 02:29:42,749 WARN  [io.qua.config] (main) Unrecognized configuration key "quarkus.http.test-timeout" was provided; it will be ignored; verify that the dependency extension for this configuration is set or you did not make a typo
+2020-12-27 02:29:44,594 INFO  [io.quarkus] (main) Quarkus 1.7.5.Final-redhat-00011 on JVM started in 4.446s. Listening on: http://0.0.0.0:8081
+2020-12-27 02:29:44,594 INFO  [io.quarkus] (main) Profile test activated.
+2020-12-27 02:29:44,595 INFO  [io.quarkus] (main) Installed features: [agroal, cdi, hibernate-orm, jdbc-h2, mutiny, narayana-jta, rest-client, resteasy, resteasy-jackson, resteasy-jsonb, smallrye-context-propagation]
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 10.625 s - in com.example.sampleapp.rest.FruitsEndpointTest
+[INFO] Running com.example.sampleapp.rest.GreetingResourceTest
+called mock service
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.025 s - in com.example.sampleapp.rest.GreetingResourceTest
+[INFO] Running com.example.sampleapp.rest.HelloResourceTest
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.703 s - in com.example.sampleapp.rest.HelloResourceTest
+2020-12-27 02:29:47,825 INFO  [io.quarkus] (main) Quarkus stopped in 0.048s
+[INFO] 
+[INFO] Results:
+[INFO]
+[INFO] Tests run: 8, Failures: 0, Errors: 0, Skipped: 0
+[INFO]
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  18.571 s
+[INFO] Finished at: 2020-12-27T02:29:47+09:00
+[INFO] ------------------------------------------------------------------------
+```
+成功しました。よく見るとMockが標準出力した`called mock service`もちゃんと出ています。

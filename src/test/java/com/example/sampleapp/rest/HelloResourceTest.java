@@ -1,7 +1,6 @@
 package com.example.sampleapp.rest;
 
 import io.quarkus.test.junit.QuarkusTest;
-import io.restassured.path.xml.XmlPath;
 
 import org.junit.jupiter.api.Test;
 
@@ -10,9 +9,6 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.Matchers.lessThan;
 import static org.hamcrest.Matchers.*;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 @QuarkusTest
 public class HelloResourceTest {
@@ -32,7 +28,8 @@ public class HelloResourceTest {
           .when().get("/hello/greeting/test")
           .then()
              .statusCode(200)
-             .body(is("hello test")).time(lessThan(1000L)).log().all();
+             .body(is("hello test")).time(lessThan(1000L));
+            //  .log().all();
     }
 
     @Test
@@ -40,7 +37,7 @@ public class HelloResourceTest {
       given()
         .when().get("/hello/json")
         .then()
-          .log().all()
+          // .log().all()
           .assertThat()
           .body(containsString("Yamada"));
 
@@ -51,7 +48,7 @@ public class HelloResourceTest {
       given()
         .when().get("/hello/json")
         .then()
-          .log().body()
+          // .log().body()
           .assertThat()
           .body("age",equalTo(20));
 
@@ -62,7 +59,7 @@ public class HelloResourceTest {
       given()
         .when().get("/hello/json")
         .then()
-          .log().body()
+          // .log().body()
           .assertThat()
           .body("birthdate",not(empty()))
           .body("name", equalToIgnoringCase("yamada"))
@@ -76,34 +73,34 @@ public class HelloResourceTest {
       given()
         .when().get("/hello/404")
         .then()
-          .statusCode(404)
-          .log().all();
+          .statusCode(404);
+          // .log().all();
     }
 
 
 
 
     // @Test
-    public void testExternalJson() {
+    // public void testExternalJson() {
       
-      int sum = 0;
-      Object obj =
-      given()
-        .queryParam("CUSTOMER_ID","68195")
-        .queryParam("PASSWORD","1234!")
-        .queryParam("Account_No","1")
-        .when().get("http://demo.guru99.com/V4/sinkministatement.php")
-        // .timeIn(TimeUnit.MILLISECONDS);
-        .then()
-           .log().all()
-          //  .assertThat()
-          //  .statusCode(200)
-          .contentType("application/json")
-           .extract().path("result.statements.AMOUNT");
+    //   int sum = 0;
+    //   Object obj =
+    //   given()
+    //     .queryParam("CUSTOMER_ID","68195")
+    //     .queryParam("PASSWORD","1234!")
+    //     .queryParam("Account_No","1")
+    //     .when().get("http://demo.guru99.com/V4/sinkministatement.php")
+    //     // .timeIn(TimeUnit.MILLISECONDS);
+    //     .then()
+    //        .log().all()
+    //       //  .assertThat()
+    //       //  .statusCode(200)
+    //       .contentType("application/json")
+    //        .extract().path("result.statements.AMOUNT");
 
-      System.out.println(((XmlPath)obj).get());
+    //   System.out.println(((XmlPath)obj).get());
            
 
-    }
+    // }
 
 }

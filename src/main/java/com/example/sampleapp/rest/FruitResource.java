@@ -101,7 +101,7 @@ public class FruitResource {
 
         @Override
         public Response toResponse(Exception exception) {
-            LOGGER.error("Failed to handle request", exception);
+            // LOGGER.error("Failed to handle request", exception);
 
             int code = 500;
             if (exception instanceof WebApplicationException) {
