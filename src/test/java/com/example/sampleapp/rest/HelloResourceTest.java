@@ -76,7 +76,7 @@ public class HelloResourceTest {
       given()
         .when().get("/hello/404")
         .then()
-          .statusCode(405)
+          .statusCode(404)
           .log().all();
     }
 
