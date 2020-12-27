@@ -20,6 +20,7 @@ public class GreetingResource {
     @Produces(MediaType.TEXT_PLAIN)
     @Path("/greeting/{name}")
     public String greeting(@PathParam String name) {
+        System.out.println("service is "+service);
         return service.hello() + name;
     }
 

@@ -1,22 +1,24 @@
 package com.example.sampleapp.rest;
 
 import static io.restassured.RestAssured.given;
-import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.Matchers.endsWith;
 
-import javax.inject.Inject;
-
-import org.eclipse.microprofile.rest.client.inject.RestClient;
 import org.junit.jupiter.api.Test;
 
-import io.quarkus.test.junit.QuarkusMock;
+import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 
 @QuarkusTest
+@QuarkusTestResource(WiremockService.class)
 public class GreetingResourceTest {
 
-    @Inject
-    @RestClient
-    GreetingService greetingService;
+    // @Inject
+    // @RestClient
+    // GreetingService greetingService;
+
+    // @Inject
+    // @ConfigProperty(name = "mock.externalservice.enabled", defaultValue = "false")
+    // Boolean mockExternalServiceEnabled;
 
     // @BeforeAll
     // public static void setup() {
@@ -25,17 +27,26 @@ public class GreetingResourceTest {
     //     // QuarkusMock.installMockForType(new GreetingMockService(), GreetingService.class);
     // }
 
-    @Test
-    public void testHelloEndpoint() {
-        // Mockito.when(greetingService.hello()).thenReturn("hello from mockito");
-        QuarkusMock.installMockForInstance(new GreetingMockService(), greetingService);
+    // @BeforeEach
+    // public void setup(){
+        // if (mockExternalServiceEnabled) {
+            // Mockito.when(greetingService.hello()).thenReturn("hello from mockito");
+            // QuarkusMock.installMockForInstance(new GreetingMockService(), greetingService);
+            // System.out.println("mocking external service");
+        // }
+    // }
 
+    @Test
+    public void testGreetingEndpoint() {
+     
         given()
           .when().get("/greeting/test")
           .then()
+            .log().all()
              .statusCode(200)
             //  .body(is("Hello test"));
-            .body(is("Hi test"));
+            // .body(is("Hi test"));
+            .body(endsWith(" test"));
     }
 
 }
