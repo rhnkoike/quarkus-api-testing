@@ -9,7 +9,7 @@ import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 
 @QuarkusTest
-@QuarkusTestResource(WiremockService.class)
+@QuarkusTestResource(TestStubService.class)
 public class GreetingResourceTest {
 
     // @Inject

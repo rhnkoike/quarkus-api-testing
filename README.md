@@ -1,9 +1,23 @@
 TODO
-- 説明
+- 説明文
+- 出力調整
+- ソースコメント
+- 図
+- ログ
+- レポート
+- パイプライン
+- フェーズごとの実行
 
 # API Test Automation Tutorial
 
 REST APIのテスト自動化のチュートリアルです。
+
+このチュートリアルでは、以下を通してQuarkusで実装するREST APIのテストを自動化する方法について学習します。
+- プロジェクトの作成
+- 基本的なQuarkusアプリケーションのテスト作成
+- DBを使用するQuarkusアプリケーションのテスト作成
+- 外部APIを使用するQuarkusアプリケーションのテスト作成
+- テスト用リソースのセットアップ自動化
 
 ## 前提環境
 
@@ -170,14 +184,7 @@ public class HelloResourceTest {
 Quarkusアプリ（API）がテスト時に起動し、テストが実施されました。
 起動時のPortはREST-Assured統合により自動設定されます。（デフォルト8081）プロパティで変更することも可能です。
 
-## REST-Assuredによるテスト
-
-### テストケースの作成
-
-割愛します
-
-
-## Quarkusアプリケーションのテスト
+## 基本的なQuarkusアプリケーションのテスト
 
 ### サンプルアプリへの機能追加
 
@@ -1022,8 +1029,9 @@ $ mvn test
 以下のソースファイルをテストと同じフォルダに追加します。
 -[GreetingMockService.java](./src/test/java/com/example/sampleapp/rest/GreetingMockService.java)
 
-これがGreetingServiceのMockとなります。戻り値のStringを変えてあります。
+これがGreetingServiceのMockとなります。Mockされたことがわかるように戻り値のStringを変えてあります。
 ```java
+@Mock
 @RestClient
 @ApplicationScoped
 public class GreetingMockService implements GreetingService{
@@ -1038,7 +1046,7 @@ public class GreetingMockService implements GreetingService{
 ```
 
 テスト（GreetingResourceTest）を以下のように変更します。
-Mockされたことがわかるように検証用の想定結果を変更してあります。
+Mockされたことがわかるように検証用の想定結果も変更してあります。
 ```java
 @QuarkusTest
 public class GreetingResourceTest {
@@ -1056,7 +1064,7 @@ public class GreetingResourceTest {
 
 ```
 
-テストを実行します。別コンソールでのDEVモードでの起動は不要です。
+テストを実行します。別コンソールでDEVモードでの起動は不要です。
 ```
 $ mvn test
 ...
@@ -1179,14 +1187,307 @@ $ docker exec -it quarkus_test psql -U quarkus_test -c "select * from known_frui
 (3 rows)
 
 ```
-処理結果が残っています。
+処理結果がコンテナ上のDBに反映されています。
 
-## REST APIのコンポーネントテスト自動化
-
-### 外部リソースセットアップの自動化
+## 機能テスト自動化のためのテスト用リソースのセットアップ
 
 インメモリDBや外部APIのMockによって機能テストの自動化は容易になります。
-但し実際のDBMSを使用したい場合やHTTPによる通信を実行したい場合はそのためのDBやAPI（スタブの場合あり）を起動してテストを実施する必要があります。
-そのような外部リソース起動の自動化を組み込みます。
+但し実際のDBMSを使用したい場合やHTTPによる通信を実行したい場合はそのためのDBやAPI（スタブの場合あり）を事前に起動してテストを実施する必要があります。
+機能テストの一連の操作を自動化するため、外部リソース起動についても自動化を実施します。
+
+### DBセットアップ自動化
+テスト用DBのコンテナ起動を自動化します。
+Dockerコンテナの操作をテストに組み込むにはTestContainerライブラリを使用します。
+
+pom.xmlに以下の依存関係を追加します。
+```xml
+    <dependency>
+      <groupId>org.testcontainers</groupId>
+      <artifactId>postgresql</artifactId>
+      <version>1.15.1</version>
+      <scope>test</scope>
+    </dependency>
+```
+以下のソースファイルをテストフォルダに追加します。
+- [TestDatabase.java](./src/test/java/com/example/sampleapp/rest/TestDatabase.java)
+
+このクラスは`QuarkusTestResourceLifecycleManager`インターフェースを実施しており、テストの開始前にPostgreSQLコンテナの起動を実行します。
+```java
+public class TestDatabase implements QuarkusTestResourceLifecycleManager {
+
+	public static final PostgreSQLContainer<?> DATABASE = new PostgreSQLContainer<>("postgres:10.5")
+			.withDatabaseName("quarkus_test")
+			.withUsername("quarkus_test")
+			.withPassword("quarkus_test");
+
+	@Override
+	public Map<String, String> start() {
+		DATABASE.start();
+		Map<String, String> datasourceProperties = new HashMap<>();
+		datasourceProperties.put("quarkus.datasource.username", "quarkus_test");
+		datasourceProperties.put("quarkus.datasource.password", "quarkus_test");
+		datasourceProperties.put("quarkus.datasource.jdbc.url", DATABASE.getJdbcUrl());
+		return datasourceProperties;
+	}
+
+	@Override
+	public void stop() {
+
+	}
+}
+
+```
+このPostgreSQLコンテナを使用するテスト（FruitsEndpointTest）に`@QuarkusTestResource`を追加します。
+```java
+
+@QuarkusTest
+@QuarkusTestResource(TestDatabase.class)
+public class FruitsEndpointTest {
+...
+```
+テストを実行します。
+```
+$ mvn test
+...
+[INFO] -------------------------------------------------------
+[INFO]  T E S T S
+[INFO] -------------------------------------------------------
+[INFO] Running com.example.sampleapp.rest.FruitsEndpointTest
+2020-12-28 23:24:32,221 INFO  [org.tes.doc.DockerClientProviderStrategy] (main) Loaded org.testcontainers.dockerclient.NpipeSocketClientProviderStrategy from 
+~/.testcontainers.properties, will try it first
+2020-12-28 23:24:32,832 INFO  [org.tes.doc.DockerClientProviderStrategy] (main) Found Docker environment with local Npipe socket (npipe:////./pipe/docker_engine)
+2020-12-28 23:24:32,833 INFO  [org.tes.DockerClientFactory] (main) Docker host IP address is localhost
+2020-12-28 23:24:32,870 INFO  [org.tes.DockerClientFactory] (main) Connected to docker:
+  Server Version: 20.10.0
+  API Version: 1.41
+  Operating System: Docker Desktop
+  Total Memory: 12601 MB
+2020-12-28 23:24:32,873 INFO  [org.tes.uti.ImageNameSubstitutor] (main) Image name substitution will be performed by: DefaultImageNameSubstitutor (composite of 'ConfigurationFileImageNameSubstitutor' and 'PrefixingImageNameSubstitutor')
+2020-12-28 23:24:33,161 INFO  [org.tes.uti.RegistryAuthLocator] (main) Credential helper/store (docker-credential-desktop) does not have credentials for index.docker.io
+2020-12-28 23:24:34,202 INFO  [org.tes.DockerClientFactory] (main) Ryuk started - will monitor and terminate Testcontainers containers on JVM exit
+2020-12-28 23:24:34,202 INFO  [org.tes.DockerClientFactory] (main) Checking the system...
+2020-12-28 23:24:34,203 INFO  [org.tes.DockerClientFactory] (main) ?? Docker server version should be at least 1.6.0
+2020-12-28 23:24:35,777 INFO  [org.tes.DockerClientFactory] (main) ?? Docker environment should have more than 2GB free disk space
+2020-12-28 23:24:35,799 INFO  [doc.5]] (main) Creating container for image: postgres:10.5
+2020-12-28 23:24:35,863 INFO  [doc.5]] (main) Starting container with ID: 724cfeb47cb8d808ec4275c33f3fd852a767ecf3ef42543615ca345480152b65
+2020-12-28 23:24:36,206 INFO  [doc.5]] (main) Container postgres:10.5 is starting: 724cfeb47cb8d808ec4275c33f3fd852a767ecf3ef42543615ca345480152b65
+2020-12-28 23:24:38,113 INFO  [doc.5]] (main) Container postgres:10.5 started in PT2.33471S
+2020-12-28 23:24:38,344 INFO  [org.ecl.jet.uti.log] (main) Logging initialized @11047ms to org.eclipse.jetty.util.log.Slf4jLog
+2020-12-28 23:24:38,472 INFO  [org.ecl.jet.ser.Server] (main) jetty-9.4.18.v20190429; built: 2019-04-29T20:42:08.989Z; git: e1bc35120a6617ee3df052294e433f3a25ce7097; jvm 11.0.9.1+1-LTS
+2020-12-28 23:24:38,497 INFO  [org.ecl.jet.ser.han.ContextHandler] (main) Started o.e.j.s.ServletContextHandler@617449dd{/__admin,null,AVAILABLE}
+2020-12-28 23:24:38,501 INFO  [org.ecl.jet.ser.han.ContextHandler] (main) Started o.e.j.s.ServletContextHandler@1a21f43f{/,null,AVAILABLE}
+2020-12-28 23:24:38,538 INFO  [org.ecl.jet.ser.AbstractConnector] (main) Started NetworkTrafficServerConnector@647b9364{HTTP/1.1,[http/1.1]}{0.0.0.0:8080}
+2020-12-28 23:24:38,538 INFO  [org.ecl.jet.ser.Server] (main) Started @11242ms
+2020-12-28 23:24:38,818 INFO  [org.ecl.jet.ser.han.Con.__admin] (qtp428160758-108) RequestHandlerClass from context returned com.github.tomakehurst.wiremock.http.AdminRequestHandler. Normalized mapped under returned 'null'
+2020-12-28 23:24:40,368 WARN  [org.hib.eng.jdb.spi.SqlExceptionHelper] (main) SQL Warning Code: 0, SQLState: 00000
+2020-12-28 23:24:40,368 WARN  [org.hib.eng.jdb.spi.SqlExceptionHelper] (main) table "known_fruits" does not exist, skipping
+2020-12-28 23:24:40,371 WARN  [org.hib.eng.jdb.spi.SqlExceptionHelper] (main) SQL Warning Code: 0, SQLState: 00000
+2020-12-28 23:24:40,371 WARN  [org.hib.eng.jdb.spi.SqlExceptionHelper] (main) sequence "known_fruits_id_seq" does not exist, skipping
+2020-12-28 23:24:40,942 INFO  [io.quarkus] (main) Quarkus 1.7.5.Final-redhat-00011 on JVM started in 12.012s. Listening on: http://0.0.0.0:8081
+2020-12-28 23:24:40,947 INFO  [io.quarkus] (main) Profile test activated.
+2020-12-28 23:24:40,947 INFO  [io.quarkus] (main) Installed features: [agroal, cdi, hibernate-orm, jdbc-h2, jdbc-postgresql, mutiny, narayana-jta, rest-client, resteasy, resteasy-jackson, resteasy-jsonb, smallrye-context-propagation]
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 15.001 s - in com.example.sampleapp.rest.FruitsEndpointTest
+...
+```
+PostgreSQLコンテナが自動で起動し、テストが成功します。
+
+### 外部API（スタブ）セットアップの自動化
+
+テスト用外部APIのスタブサーバーを自動で起動します。
+先ほどはQuarkusアプリを起動していましたが、以下では[ここを参考に](https://quarkus.io/guides/rest-client#using-a-mock-http-server-for-tests)Wiremockによるスタブサーバーを使用します。
+
+pom.xmlに以下の依存関係を追加します。
+```xml
+    <dependency>
+      <groupId>com.github.tomakehurst</groupId>
+      <artifactId>wiremock-jre8</artifactId>
+      <version>2.26.3</version>
+      <scope>test</scope>
+    </dependency>
+```
+
+以下のソースファイルをテストフォルダに追加します。
+- [TestStubService.java](./src/test/java/com/example/sampleapp/rest/TestStubService.java)
+
+このクラスも`QuarkusTestResourceLifecycleManager`インターフェースを実施しており、テストの開始前にWiremockスタブサーバーの起動を実行します。
+```java
+public class TestStubService implements QuarkusTestResourceLifecycleManager {
+
+	private WireMockServer wireMockServer;
+
+	@Override
+	public Map<String, String> start() {
+		wireMockServer = new WireMockServer();
+		wireMockServer.start();
+
+		stubFor(get(urlEqualTo("/helloext"))
+				.willReturn(aResponse()
+						.withHeader("Content-Type", "text/plain")
+						.withBody("Hi ")));
+
+		stubFor(get(urlMatching(".*")).atPriority(10)
+				.willReturn(aResponse().proxiedFrom("https://localhost:8080/")));
+
+		return Collections.singletonMap("org.example.sampleapp.rest.GreetingService/mp-rest/url", wireMockServer.baseUrl());
+	}
+
+	@Override
+	public void stop() {
+		if (null != wireMockServer) {
+			wireMockServer.stop();
+		}
+	}
+}
+
+```
+先ほどのMockと同じ動作を実行するスタブサーバーになります。
+
+このスタブサーバーを使用するテスト（GreetingResourceTest）に`@QuarkusTestResource`を追加します。
+```java
+
+@QuarkusTest
+@QuarkusTestResource(TestStubService.class)
+public class GreetingResourceTest {
+...
+```
+先ほどのMock（GreetingMockService）があるとそちらが使われてしまうので、無効化しておきます。
+```java
+// @Mock
+// @RestClient
+// @ApplicationScoped
+// public class GreetingMockService implements GreetingService
+public class GreetingMockService 
+{
+...
+```
+テストを実行します。
+```
+$ mvn test
+...
+[INFO] -------------------------------------------------------
+[INFO]  T E S T S
+[INFO] -------------------------------------------------------
+...
+[INFO] Running com.example.sampleapp.rest.GreetingResourceTest
+service is RESTEASY004635: Resteasy Client Proxy for : com.example.sampleapp.rest.GreetingService
+2020-12-28 23:43:50,374 INFO  [org.ecl.jet.ser.han.Con.ROOT] (qtp1954035189-99) RequestHandlerClass from context returned com.github.tomakehurst.wiremock.http.StubRequestHandler. Normalized mapped under returned 'null'
+HTTP/1.1 200 OK
+Content-Length: 7
+Content-Type: text/plain;charset=UTF-8
+
+Hi test
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.111 s - in com.example.sampleapp.rest.GreetingResourceTest
+...
+```
+スタブサーバーが自動で起動し、テストが成功します。
 
 
+
+### （参考）テスト実行フェーズの指定
+
+単体テストと機能テストが同じプロジェクト内に配置している場合などのため、[ここを参考に](https://quarkus.io/guides/tests-with-coverage#separating-executions-of-unit-tests-and-integration-tests)テストに対して実行するフェーズを指定します。
+
+`integration`タグを対象の機能テストに付与します。タグを付与するには`@Tag`を使用します。
+```java
+@QuarkusTest
+@QuarkusTestResource(TestDatabase.class)
+@Tag("integration")
+public class FruitsEndpointTest {
+...
+```
+
+pom.xmlで対象のテストの実行フェーズを指定します。以下が`integration`タグの付いたテストはintegration-testフェーズでのみ実行するという指定になります。
+```xml
+...
+<plugin>
+<artifactId>maven-surefire-plugin</artifactId>
+<version>${surefire-plugin.version}</version>
+<configuration>
+    <!-- exclude tests with integration tag -->
+    <excludedGroups>integration</excludedGroups>
+    <systemPropertyVariables>
+    <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
+    <quarkus.log.level>INFO</quarkus.log.level>
+    <maven.home>${maven.home}</maven.home>
+    </systemPropertyVariables>
+</configuration>
+<executions>
+    <!-- in integration-test phase, execute tests with integration tag only -->
+    <execution>
+        <id>integration-tests</id>
+        <phase>integration-test</phase>
+        <goals>
+            <goal>test</goal>
+        </goals>
+        <configuration>
+            <excludedGroups>!integration</excludedGroups>
+            <groups>integration</groups>
+        </configuration>
+    </execution>
+</executions>
+</plugin>
+...
+```
+
+integration-testフェーズを含むテストを実行します。
+```
+$ mvn clean verify
+...
+[INFO] --- maven-surefire-plugin:3.0.0-M5:test (default-test) @ testapp ---
+[INFO] 
+[INFO] -------------------------------------------------------
+[INFO]  T E S T S
+[INFO] -------------------------------------------------------
+[INFO] Running com.example.sampleapp.rest.GreetingResourceTest
+...
+2020-12-29 00:29:29,798 INFO  [io.quarkus] (main) Quarkus 1.7.5.Final-redhat-00011 on JVM started in 9.904s. Listening on: http://0.0.0.0:8081
+2020-12-29 00:29:29,798 INFO  [io.quarkus] (main) Profile test activated.
+2020-12-29 00:29:29,802 INFO  [io.quarkus] (main) Installed features: [agroal, cdi, hibernate-orm, jdbc-h2, jdbc-postgresql, mutiny, narayana-jta, rest-client, resteasy, resteasy-jackson, resteasy-jsonb, smallrye-context-propagation]
+...
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 15.857 s - in com.example.sampleapp.rest.GreetingResourceTest
+[INFO] Running com.example.sampleapp.rest.HelloResourceTest
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.748 s - in com.example.sampleapp.rest.HelloResourceTest
+2020-12-29 00:29:32,248 INFO  [io.quarkus] (main) Quarkus stopped in 0.068s
+[INFO] 
+[INFO] Results:
+[INFO]
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0
+[INFO] 
+[INFO] 
+[INFO] --- maven-jar-plugin:2.4:jar (default-jar) @ testapp ---
+[INFO] Building jar: C:\Nori\Trial\Quarkus\testapp\target\testapp-1.0-SNAPSHOT.jar
+[INFO] 
+[INFO] --- quarkus-maven-plugin:1.7.5.Final-redhat-00011:build (default) @ testapp ---
+[INFO] [org.jboss.threads] JBoss Threads version 3.1.1.Final-redhat-00001
+[INFO] [org.hibernate.Version] HHH000412: Hibernate ORM core version 5.4.21.Final-redhat-00005
+[INFO] [io.quarkus.deployment.pkg.steps.JarResultBuildStep] Building thin jar: C:\Nori\Trial\Quarkus\testapp\target\testapp-1.0-SNAPSHOT-runner.jar
+[INFO] [io.quarkus.deployment.QuarkusAugmentor] Quarkus augmentation completed in 2813ms
+[INFO] 
+[INFO] --- maven-surefire-plugin:3.0.0-M5:test (integration-tests) @ testapp ---
+[INFO] 
+[INFO] -------------------------------------------------------
+[INFO]  T E S T S
+[INFO] -------------------------------------------------------
+
+...
+2020-12-29 00:29:48,085 INFO  [io.quarkus] (main) Quarkus 1.7.5.Final-redhat-00011 on JVM started in 9.370s. Listening on: http://0.0.0.0:8081
+2020-12-29 00:29:48,085 INFO  [io.quarkus] (main) Profile test activated.
+2020-12-29 00:29:48,086 INFO  [io.quarkus] (main) Installed features: [agroal, cdi, hibernate-orm, jdbc-h2, jdbc-postgresql, mutiny, narayana-jta, rest-client, resteasy, resteasy-jackson, resteasy-jsonb, smallrye-context-propagation]
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 11.995 s - in com.example.sampleapp.rest.FruitsEndpointTest
+2020-12-29 00:29:50,069 INFO  [io.quarkus] (main) Quarkus stopped in 0.047s
+[INFO] 
+[INFO] Results:
+[INFO]
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0
+[INFO] 
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+```
+対象のテストのみがintegration-testフェーズで実行されていることがわかります。
+
+## おわりに
+
+Quarkusを利用したREST APIのテスト自動化について学習しました。
+
+お疲れさまでした。
