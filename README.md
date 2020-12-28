@@ -1,3 +1,6 @@
+TODO
+- 説明
+
 # API Test Automation Tutorial
 
 REST APIのテスト自動化のチュートリアルです。
@@ -1177,3 +1180,13 @@ $ docker exec -it quarkus_test psql -U quarkus_test -c "select * from known_frui
 
 ```
 処理結果が残っています。
+
+## REST APIのコンポーネントテスト自動化
+
+### 外部リソースセットアップの自動化
+
+インメモリDBや外部APIのMockによって機能テストの自動化は容易になります。
+但し実際のDBMSを使用したい場合やHTTPによる通信を実行したい場合はそのためのDBやAPI（スタブの場合あり）を起動してテストを実施する必要があります。
+そのような外部リソース起動の自動化を組み込みます。
+
+

@@ -1,11 +1,11 @@
 package com.example.sampleapp.rest;
 
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
-import io.quarkus.test.common.QuarkusTestResourceLifecycleManager;
 import org.testcontainers.containers.PostgreSQLContainer;
+
+import io.quarkus.test.common.QuarkusTestResourceLifecycleManager;
 
 public class TestDatabase implements QuarkusTestResourceLifecycleManager {
 
