@@ -6,7 +6,6 @@ TODO
 - ログ
 - レポート
 - パイプライン
-- フェーズごとの実行
 
 # API Test Automation Tutorial
 
@@ -23,6 +22,7 @@ REST APIのテスト自動化のチュートリアルです。
 
 - OpenJDK11 (or 8)
 - Apache Maven
+- Docker
 
 ## プロジェクトの作成
 
@@ -44,6 +44,30 @@ $ mvn io.quarkus:quarkus-maven-plugin:1.7.5.Final-redhat-00011:create \
 ```
 
 ![プロジェクト](./img/001.png)
+
+```
+\TESTAPP
+├─.mvn
+│  └─wrapper
+├─.settings
+└─src
+    ├─main
+    │  ├─docker
+    │  ├─java
+    │  │  └─com
+    │  │      └─example
+    │  │          └─sampleapp
+    │  │              └─rest
+    │  └─resources
+    │      └─META-INF
+    │          └─resources
+    └─test
+        └─java
+            └─com
+                └─example
+                    └─sampleapp
+                        └─rest
+```
 
 pom.xmlには以下のような依存関係が定義されています。
 デフォルトでQuarkusのテスト支援機能やREST-Assuredが入っています。
@@ -930,6 +954,99 @@ Content-Type: application/json
 [INFO] ------------------------------------------------------------------------
 ```
 
+
+### モードによるDBの切り替え
+
+テストの際はインメモリDBではなく別で稼働するDBへ実際に接続してテストを実行するようにモードによる切り替えを行います。
+
+DBはPostgreSQLのDockerコンテナを使用します。（Docker環境がない場合はSkipしてください）
+
+application.propertiesを以下のように変更します。
+%{mode}.～の定義はモード別の設定を示します。%devはDEVモード、%testはTESTモードの設定です。
+```
+quarkus.datasource.username=quarkus_test
+quarkus.datasource.password=quarkus_test
+%dev.quarkus.datasource.db-kind=h2
+%dev.quarkus.datasource.jdbc.url=jdbc:h2:mem:quarkus_test
+%dev.quarkus.datasource.jdbc.driver=org.h2.Driver
+%test.quarkus.datasource.db-kind=postgresql
+%test.quarkus.datasource.jdbc.url=jdbc:postgresql://localhost/quarkus_test
+%test.quarkus.datasource.jdbc.driver=org.postgresql.Driver
+```
+
+Extensionを追加します。PostgreSQL接続用ドライバの拡張になります。
+```
+$ mvn quarkus:add-extensions -Dextensions="jdbc-postgres"  
+...
+```
+
+DBを起動します。今回はPostgreSQLのDockerコンテナを使用します。
+```
+$ docker run --ulimit memlock=-1:-1 -it --rm=true --memory-swappiness=0 --name quarkus_test -e POSTGRES_USER=quarkus_test 
+-e POSTGRES_PASSWORD=quarkus_test -e POSTGRES_DB=quarkus_test -p 5432:5432 postgres:10.5
+Unable to find image 'postgres:10.5' locally
+10.5: Pulling from library/postgres
+f17d81b4b692: Pull complete
+....
+
+PostgreSQL init process complete; ready for start up.
+
+2020-12-27 06:11:40.658 UTC [1] LOG:  listening on IPv4 address "0.0.0.0", port 5432
+2020-12-27 06:11:40.658 UTC [1] LOG:  listening on IPv6 address "::", port 5432
+2020-12-27 06:11:40.668 UTC [1] LOG:  listening on Unix socket "/var/run/postgresql/.s.PGSQL.5432"
+2020-12-27 06:11:40.713 UTC [61] LOG:  database system was shut down at 2020-12-27 06:11:40 UTC
+2020-12-27 06:11:40.724 UTC [1] LOG:  database system is ready to accept connections
+```
+
+テストを実行します。余計な標準出力は抑止してあります。
+```
+$ mvn test
+...
+[INFO] -------------------------------------------------------
+[INFO]  T E S T S
+[INFO] -------------------------------------------------------
+[INFO] Running com.example.sampleapp.rest.FruitsEndpointTest
+2020-12-27 15:36:35,084 WARN  [io.qua.config] (main) Unrecognized configuration key "quarkus.http.test-timeout" was provided; it will be ignored; verify that the dependency extension for this configuration is set or you did not make a typo
+2020-12-27 15:36:36,571 WARN  [org.hib.eng.jdb.spi.SqlExceptionHelper] (main) SQL Warning Code: 0, SQLState: 00000
+2020-12-27 15:36:36,571 WARN  [org.hib.eng.jdb.spi.SqlExceptionHelper] (main) table "known_fruits" does not exist, skipping
+2020-12-27 15:36:36,573 WARN  [org.hib.eng.jdb.spi.SqlExceptionHelper] (main) SQL Warning Code: 0, SQLState: 00000
+2020-12-27 15:36:36,573 WARN  [org.hib.eng.jdb.spi.SqlExceptionHelper] (main) sequence "known_fruits_id_seq" does not exist, skipping
+2020-12-27 15:36:37,218 INFO  [io.quarkus] (main) Quarkus 1.7.5.Final-redhat-00011 on JVM started in 4.893s. Listening on: http://0.0.0.0:8081
+2020-12-27 15:36:37,222 INFO  [io.quarkus] (main) Profile test activated. 
+2020-12-27 15:36:37,222 INFO  [io.quarkus] (main) Installed features: [agroal, cdi, hibernate-orm, jdbc-h2, jdbc-postgresql, mutiny, narayana-jta, rest-client, resteasy, resteasy-jackson, resteasy-jsonb, smallrye-context-propagation]
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 8.083 s - in com.example.sampleapp.rest.FruitsEndpointTest
+[INFO] Running com.example.sampleapp.rest.GreetingResourceTest
+called mock service
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.024 s - in com.example.sampleapp.rest.GreetingResourceTest
+[INFO] Running com.example.sampleapp.rest.HelloResourceTest
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.762 s - in com.example.sampleapp.rest.HelloResourceTest
+2020-12-27 15:36:40,608 INFO  [io.quarkus] (main) Quarkus stopped in 0.046s
+[INFO]
+[INFO] Results:
+[INFO]
+[INFO] Tests run: 8, Failures: 0, Errors: 0, Skipped: 0
+[INFO]
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  16.567 s
+[INFO] Finished at: 2020-12-27T15:36:40+09:00
+[INFO] ------------------------------------------------------------------------
+```
+DBのテーブルを確認してみます。
+```
+$ docker exec -it quarkus_test psql -U quarkus_test -c "select * from known_fruits;"
+ id |  name
+----+--------
+  2 | Apple
+  3 | Banana
+ 10 | Pear
+(3 rows)
+
+```
+処理結果がコンテナ上のDBに反映されています。
+
+
 ## 外部APIを呼び出すQuarkusアプリのテスト
 
 ### サンプルアプリの追加
@@ -1098,96 +1215,6 @@ called mock service
 成功しました。よく見るとMockが標準出力した`called mock service`もちゃんと出ています。
 
 
-
-### （オプション）モードによるDBの切り替え
-テストの際はインメモリDBではなく別で稼働するDBへ実際に接続してテストを実行するようにモードによる切り替えを行います。
-
-DBはPostgreSQLのDockerコンテナを使用します。（Docker環境がない場合はSkipしてください）
-
-application.propertiesを以下のように変更します。
-%{mode}.～の定義はモード別の設定を示します。%devはDEVモード、%testはTESTモードの設定です。
-```
-quarkus.datasource.username=quarkus_test
-quarkus.datasource.password=quarkus_test
-%dev.quarkus.datasource.db-kind=h2
-%dev.quarkus.datasource.jdbc.url=jdbc:h2:mem:quarkus_test
-%dev.quarkus.datasource.jdbc.driver=org.h2.Driver
-%test.quarkus.datasource.db-kind=postgresql
-%test.quarkus.datasource.jdbc.url=jdbc:postgresql://localhost/quarkus_test
-%test.quarkus.datasource.jdbc.driver=org.postgresql.Driver
-```
-
-Extensionを追加します。PostgreSQL接続用ドライバの拡張になります。
-```
-$ mvn quarkus:add-extensions -Dextensions="jdbc-postgres"  
-...
-```
-
-DBを起動します。今回はPostgreSQLのDockerコンテナを使用します。
-```
-$ docker run --ulimit memlock=-1:-1 -it --rm=true --memory-swappiness=0 --name quarkus_test -e POSTGRES_USER=quarkus_test 
--e POSTGRES_PASSWORD=quarkus_test -e POSTGRES_DB=quarkus_test -p 5432:5432 postgres:10.5
-Unable to find image 'postgres:10.5' locally
-10.5: Pulling from library/postgres
-f17d81b4b692: Pull complete
-....
-
-PostgreSQL init process complete; ready for start up.
-
-2020-12-27 06:11:40.658 UTC [1] LOG:  listening on IPv4 address "0.0.0.0", port 5432
-2020-12-27 06:11:40.658 UTC [1] LOG:  listening on IPv6 address "::", port 5432
-2020-12-27 06:11:40.668 UTC [1] LOG:  listening on Unix socket "/var/run/postgresql/.s.PGSQL.5432"
-2020-12-27 06:11:40.713 UTC [61] LOG:  database system was shut down at 2020-12-27 06:11:40 UTC
-2020-12-27 06:11:40.724 UTC [1] LOG:  database system is ready to accept connections
-```
-
-テストを実行します。余計な標準出力は抑止してあります。
-```
-$ mvn test
-...
-[INFO] -------------------------------------------------------
-[INFO]  T E S T S
-[INFO] -------------------------------------------------------
-[INFO] Running com.example.sampleapp.rest.FruitsEndpointTest
-2020-12-27 15:36:35,084 WARN  [io.qua.config] (main) Unrecognized configuration key "quarkus.http.test-timeout" was provided; it will be ignored; verify that the dependency extension for this configuration is set or you did not make a typo
-2020-12-27 15:36:36,571 WARN  [org.hib.eng.jdb.spi.SqlExceptionHelper] (main) SQL Warning Code: 0, SQLState: 00000
-2020-12-27 15:36:36,571 WARN  [org.hib.eng.jdb.spi.SqlExceptionHelper] (main) table "known_fruits" does not exist, skipping
-2020-12-27 15:36:36,573 WARN  [org.hib.eng.jdb.spi.SqlExceptionHelper] (main) SQL Warning Code: 0, SQLState: 00000
-2020-12-27 15:36:36,573 WARN  [org.hib.eng.jdb.spi.SqlExceptionHelper] (main) sequence "known_fruits_id_seq" does not exist, skipping
-2020-12-27 15:36:37,218 INFO  [io.quarkus] (main) Quarkus 1.7.5.Final-redhat-00011 on JVM started in 4.893s. Listening on: http://0.0.0.0:8081
-2020-12-27 15:36:37,222 INFO  [io.quarkus] (main) Profile test activated. 
-2020-12-27 15:36:37,222 INFO  [io.quarkus] (main) Installed features: [agroal, cdi, hibernate-orm, jdbc-h2, jdbc-postgresql, mutiny, narayana-jta, rest-client, resteasy, resteasy-jackson, resteasy-jsonb, smallrye-context-propagation]
-[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 8.083 s - in com.example.sampleapp.rest.FruitsEndpointTest
-[INFO] Running com.example.sampleapp.rest.GreetingResourceTest
-called mock service
-[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.024 s - in com.example.sampleapp.rest.GreetingResourceTest
-[INFO] Running com.example.sampleapp.rest.HelloResourceTest
-[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.762 s - in com.example.sampleapp.rest.HelloResourceTest
-2020-12-27 15:36:40,608 INFO  [io.quarkus] (main) Quarkus stopped in 0.046s
-[INFO]
-[INFO] Results:
-[INFO]
-[INFO] Tests run: 8, Failures: 0, Errors: 0, Skipped: 0
-[INFO]
-[INFO] ------------------------------------------------------------------------
-[INFO] BUILD SUCCESS
-[INFO] ------------------------------------------------------------------------
-[INFO] Total time:  16.567 s
-[INFO] Finished at: 2020-12-27T15:36:40+09:00
-[INFO] ------------------------------------------------------------------------
-```
-DBのテーブルを確認してみます。
-```
-$ docker exec -it quarkus_test psql -U quarkus_test -c "select * from known_fruits;"
- id |  name
-----+--------
-  2 | Apple
-  3 | Banana
- 10 | Pear
-(3 rows)
-
-```
-処理結果がコンテナ上のDBに反映されています。
 
 ## 機能テスト自動化のためのテスト用リソースのセットアップ
 
