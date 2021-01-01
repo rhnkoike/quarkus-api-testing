@@ -138,6 +138,15 @@ public class HelloResourceTest {
 
 }
 ```
+Rest Assuredは、Rest APIテストの自動化を可能にするJavaライブラリのグループです。
+Rest AssuredはJavaベースであり、学習にはコアJavaの知識があれば十分です。
+複雑な JSON 構造からリクエストとレスポンスの値を取得するのに役立ちます。
+APIリクエストは、ヘッダー、クエリ、パスパラメータ、任意のセッションやクッキーを設定してカスタマイズすることができます。
+アサート文や条件を設定するのに役立ちます。
+Rest AssuredはレスポンスがJSONタイプの場合に非常に便利ですが、コンテンツのタイプがHTMLやプレーンテキストの場合には、そのメソッドがシームレスに動作しないことがあります。
+
+![REST-Assured Methods](./img/restassured.png)
+
 
 
 デフォルトで用意されたテストを実行します。
