@@ -77,6 +77,15 @@ public class HelloResourceTest {
           // .log().all();
     }
 
+    @Test
+    public void testJson5() {
+      given()
+        .when().get("/hello/json")
+        .then()
+          .statusCode(200)
+          .body("occupation.title", equalTo("Student"))
+          .log().all();
+    }
 
 
 

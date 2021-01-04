@@ -80,6 +80,10 @@
       <version>2.26.3</version>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-openshift</artifactId>
+    </dependency>
   </dependencies>
   <repositories>
     <repository>
@@ -129,8 +133,6 @@
         <artifactId>maven-surefire-plugin</artifactId>
         <version>${surefire-plugin.version}</version>
         <configuration>
-          <!-- exclude tests with integration tag -->
-          <!-- <excludedGroups>integration</excludedGroups> -->
           <systemPropertyVariables>
             <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
             <quarkus.log.level>INFO</quarkus.log.level>
@@ -138,20 +140,6 @@
             <maven.home>${maven.home}</maven.home>
           </systemPropertyVariables>
         </configuration>
-         <!-- in integration-test phase, execute tests with integration tag only -->
-        <!-- <executions>
-          <execution>
-              <id>integration-tests</id>
-              <phase>integration-test</phase>
-              <goals>
-                  <goal>test</goal>
-              </goals>
-              <configuration>
-                  <excludedGroups>!integration</excludedGroups>
-                  <groups>integration</groups>
-              </configuration>
-          </execution>
-        </executions> -->
       </plugin>
     </plugins>
   </build>
