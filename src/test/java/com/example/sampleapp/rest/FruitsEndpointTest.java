@@ -84,7 +84,7 @@ public class FruitsEndpointTest {
                 .then()
                 .statusCode(200);
 
-        //List all, cherry should be missing now:
+        //List all, cherry should be updated now:
         given()
                 .when().get("/fruits")
                 .then()

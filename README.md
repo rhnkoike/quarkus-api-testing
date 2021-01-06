@@ -181,11 +181,13 @@ $ mvn clean verify
 ...
 ```
 
-Quarkusのサンプルアプリ（API）がテスト時に起動し、テストが実施されました。
+Quarkusのサンプルアプリ（API）がテスト時に自動で起動し、テストが実施されました。
 起動時のPortはREST-Assured統合により自動設定されます（デフォルト8081）。プロパティで変更することも可能です。
 
 ---
 ## 基本的なQuarkusアプリケーションのテスト
+
+REST-Assuredを使った基本的なREST APIのテストについて見ていきます。
 
 ### サンプルアプリへの機能追加
 
@@ -319,12 +321,10 @@ Content-Type: application/json
 [INFO] ------------------------------------------------------------------------
 [INFO] BUILD SUCCESS
 [INFO] ------------------------------------------------------------------------
-[INFO] Total time:  11.370 s
-[INFO] Finished at: 2020-12-25T23:59:41+09:00
-[INFO] ------------------------------------------------------------------------
+...
 ```
-次は以下のテストを追加。
-複数項目の検証を行います。
+次は以下のテストを追加します。
+レスポンスJSON上の複数項目の検証を行います。
 ```java
 @Test
     public void testJson3() {
@@ -332,11 +332,10 @@ Content-Type: application/json
         .when().get("/hello/json")
         .then()
           .log().body()
-          .assertThat()
-          .body("birthdate",not(empty()))
-          .body("name", equalToIgnoringCase("yamada"))
-          .body("gender",nullValue())
-          .body("age",lessThan(30));
+          .body("birthdate",not(empty()))               // 値が入っていること
+          .body("name", equalToIgnoringCase("yamada"))  // 文字列検証
+          .body("gender",nullValue())                   // 要素がないこと
+          .body("age",lessThan(30));                    // 数値上限
 
     }
 ```
@@ -351,20 +350,7 @@ $ mvn test
 2020-12-26 00:24:37,874 INFO  [io.quarkus] (main) Quarkus 1.7.5.Final-redhat-00011 on JVM started in 2.215s. Listening on: http://0.0.0.0:8081
 2020-12-26 00:24:37,876 INFO  [io.quarkus] (main) Profile test activated. 
 2020-12-26 00:24:37,876 INFO  [io.quarkus] (main) Installed features: [cdi, resteasy, resteasy-jsonb]
-{
-    "birthdate": "2000/12/25",
-    "name": "Yamada",
-    "age": 20
-}
-{
-    "birthdate": "2000/12/25",
-    "name": "Yamada",
-    "age": 20
-}
-HTTP/1.1 200 OK
-Content-Length: 51
-Content-Type: application/json
-
+...
 {
     "birthdate": "2000/12/25",
     "name": "Yamada",
@@ -380,18 +366,16 @@ Content-Type: application/json
 [INFO] ------------------------------------------------------------------------
 [INFO] BUILD SUCCESS
 [INFO] ------------------------------------------------------------------------
-[INFO] Total time:  10.300 s
-[INFO] Finished at: 2020-12-26T00:24:40+09:00
-[INFO] ------------------------------------------------------------------------
+...
 ```
-ステータスコードを扱うテストは以下のように。
+ステータスコードを検証するテストは以下のようになります。
 ```java
     @Test
     public void testJson404() {
       given()
         .when().get("/hello/404")
         .then()
-          .statusCode(405)
+          .statusCode(404)          // StatusCodeが404
           .log().all();
     }
 ```
@@ -413,25 +397,7 @@ Content-Type: text/html;charset=UTF-8
 <html>
   <body>RESTEASY003210: Could not find resource for full path: http://localhost:8081/hello/404</body>
 </html>
-{
-    "birthdate": "2000/12/25",
-    "name": "Yamada",
-    "age": 20
-}
-{
-    "birthdate": "2000/12/25",
-    "name": "Yamada",
-    "age": 20
-}
-HTTP/1.1 200 OK
-Content-Length: 51
-Content-Type: application/json
-
-{
-    "birthdate": "2000/12/25",
-    "name": "Yamada",
-    "age": 20
-}
+...
 [INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 5.092 s - in com.example.sampleapp.rest.HelloResourceTest
 2020-12-26 00:32:00,993 INFO  [io.quarkus] (main) Quarkus stopped in 0.057s
 [INFO] 
@@ -441,21 +407,25 @@ Content-Type: application/json
 [INFO]
 [INFO] ------------------------------------------------------------------------
 [INFO] BUILD SUCCESS
-[INFO] ------------------------------------------------------------------------
-[INFO] Total time:  10.617 s
-[INFO] Finished at: 2020-12-26T00:32:01+09:00
-[INFO] ------------------------------------------------------------------------
+[INFO] ------------------------------------------------------------------------ 
+...
 ```
+---
 
-## DBを使用するQuarkusアプリのテスト
+## DBを使用するQuarkusアプリケーションのテスト
 
-### アプリの追加
+DBを使用するREST APIのテストについて、より複雑なパターンも交えて見ていきます。
+
+### サンプルアプリへの機能追加
+ここではJPAによるDBアクセスを行うAPIエンドポイントを追加します。
+Hibernate ORM拡張のquickstartからサンプルアプリを拝借します。
 
 以下のソースファイルを追加します。
 - [FruitResource.java](./src/main/java/com/example/sampleapp/rest/FruitResource.java)
 - [Fruit.java](./src/main/java/com/example/sampleapp/rest/Fruit.java)
 
-以下のリソースファイルを追加します。
+resourceフォルダに以下のリソースファイルを追加します。
+このSQLファイルはDB初期化時に実行されます。
 - [import.sql](./src/main/resource/import.sql)
 
 application.propertiesに以下の定義を追加します。
@@ -465,20 +435,20 @@ DBはインメモリDB（H2）を使用します。
 quarkus.datasource.db-kind=h2
 quarkus.datasource.username=quarkus_test
 quarkus.datasource.password=quarkus_test
-%dev.quarkus.datasource.jdbc.url=jdbc:h2:mem:quarkus_test
-%dev.quarkus.datasource.jdbc.driver=org.h2.Driver
+quarkus.datasource.jdbc.url=jdbc:h2:mem:quarkus_test
+quarkus.datasource.jdbc.driver=org.h2.Driver
 
 quarkus.hibernate-orm.database.generation=drop-and-create
 quarkus.hibernate-orm.log.sql=true
 quarkus.hibernate-orm.sql-load-script=import.sql
-
 ```
 
-Extensionを追加します。
+必要なExtensionを追加します。
 ```
 $ mvn quarkus:add-extensions -Dextensions="hibernate-orm,jdbc-h2,resteasy-jackson"   
 ```
-起動して動作確認します。
+
+まずはDEVモードで起動して動作確認します。
 ```
 $ mvn clean compile quarkus:dev
 ...
@@ -516,6 +486,9 @@ __  ____  __  _____   ___  __ ____  ______
 2020-12-26 17:38:42,912 INFO  [io.quarkus] (Quarkus Main Thread) Profile dev activated. Live Coding activated.
 2020-12-26 17:38:42,913 INFO  [io.quarkus] (Quarkus Main Thread) Installed features: [agroal, cdi, hibernate-orm, jdbc-h2, mutiny, narayana-jta, resteasy, resteasy-jackson, resteasy-jsonb, smallrye-context-propagation]
 ```
+起動時にDBの初期化（テーブル作成やデータ投入）が実行されていることがわかります。
+
+
 APIを呼び出します。
 DBから取得した結果が表示されます。
 ```
@@ -524,11 +497,11 @@ $ curl http://localhost:8080/fruits
 ```
 
 ### テストの追加
-以下のソースファイルを追加します。
+testフォルダに以下のソースファイルを追加します。
 
 - [FruitsEndpointTest.java](./src/test/java/com/example/sampleapp/rest/FruitsEndpointTest.java)
 
-このテストには更新系の処理が含まれるシナリオベースのテストになっています。
+このテストは更新系を含む複数のAPI呼び出しが実行されるシナリオベースのテストになっています。
 ```java
 @QuarkusTest
 public class FruitsEndpointTest {
@@ -564,7 +537,7 @@ public class FruitsEndpointTest {
         //Create the Pear:
         given()
                 .when()
-                .body("{\"name\" : \"Pear\"}")
+                .body("{\"name\" : \"Pear\"}")      // JSONをPOST
                 .contentType("application/json")
                 .post("/fruits")
                 .then()
@@ -591,30 +564,7 @@ $ mvn test
 [INFO]  T E S T S
 [INFO] -------------------------------------------------------
 [INFO] Running com.example.sampleapp.rest.FruitsEndpointTest
-Hibernate: 
-
-    drop table if exists known_fruits CASCADE
-Hibernate:
-
-    drop sequence if exists known_fruits_id_seq
-Hibernate: create sequence known_fruits_id_seq start with 10 increment by 1
-Hibernate:
-
-    create table known_fruits (
-       id integer not null,
-        name varchar(40),
-        primary key (id)
-    )
-Hibernate:
-
-    alter table known_fruits
-       add constraint UK_57g3m8wr3qxoj706a6hsqg6ye unique (name)
-Hibernate:
-    INSERT INTO known_fruits(id, name) VALUES (1, 'Cherry')
-Hibernate:
-    INSERT INTO known_fruits(id, name) VALUES (2, 'Apple')
-Hibernate:
-    INSERT INTO known_fruits(id, name) VALUES (3, 'Banana')
+...
 2020-12-26 17:56:35,096 INFO  [io.quarkus] (main) Quarkus 1.7.5.Final-redhat-00011 on JVM started in 4.478s. Listening on: http://0.0.0.0:8081
 2020-12-26 17:56:35,100 INFO  [io.quarkus] (main) Profile test activated.
 2020-12-26 17:56:35,100 INFO  [io.quarkus] (main) Installed features: [agroal, cdi, hibernate-orm, jdbc-h2, mutiny, narayana-jta, resteasy, resteasy-jackson, resteasy-jsonb, smallrye-context-propagation]
@@ -659,51 +609,7 @@ Hibernate:
         fruit0_.name
 [INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 7.224 s - in com.example.sampleapp.rest.FruitsEndpointTest
 [INFO] Running com.example.sampleapp.rest.HelloResourceTest
-2020-12-26 17:56:37,252 ERROR [com.exa.sam.res.FruitResource] (executor-thread-1) Failed to handle request: javax.ws.rs.NotFoundException: RESTEASY003210: Could not find resource for full path: http://localhost:8081/hello/404
-        at org.jboss.resteasy.core.registry.SegmentNode.match(SegmentNode.java:152)
-        at org.jboss.resteasy.core.registry.RootNode.match(RootNode.java:73)
-        at org.jboss.resteasy.core.registry.RootClassNode.match(RootClassNode.java:47)
-        at org.jboss.resteasy.core.ResourceMethodRegistry.getResourceInvoker(ResourceMethodRegistry.java:481)
-        at org.jboss.resteasy.core.SynchronousDispatcher.getInvoker(SynchronousDispatcher.java:330)
-        at org.jboss.resteasy.core.SynchronousDispatcher.lambda$invoke$4(SynchronousDispatcher.java:251)
-        at org.jboss.resteasy.core.SynchronousDispatcher.lambda$preprocess$0(SynchronousDispatcher.java:160)
-        at org.jboss.resteasy.core.interception.jaxrs.PreMatchContainerRequestContext.filter(PreMatchContainerRequestContext.java:364)
-        at org.jboss.resteasy.core.SynchronousDispatcher.preprocess(SynchronousDispatcher.java:163)
-        at org.jboss.resteasy.core.SynchronousDispatcher.invoke(SynchronousDispatcher.java:245)
-        at io.quarkus.resteasy.runtime.standalone.RequestDispatcher.service(RequestDispatcher.java:73)
-        at io.quarkus.resteasy.runtime.standalone.VertxRequestHandler.dispatch(VertxRequestHandler.java:132)
-        at io.quarkus.resteasy.runtime.standalone.VertxRequestHandler.access$000(VertxRequestHandler.java:37)
-        at io.quarkus.resteasy.runtime.standalone.VertxRequestHandler$1.run(VertxRequestHandler.java:94)
-        at org.jboss.threads.ContextClassLoaderSavingRunnable.run(ContextClassLoaderSavingRunnable.java:35)
-        at org.jboss.threads.EnhancedQueueExecutor.safeRun(EnhancedQueueExecutor.java:2046)
-        at org.jboss.threads.EnhancedQueueExecutor$ThreadBody.doRunTask(EnhancedQueueExecutor.java:1578)
-        at org.jboss.threads.EnhancedQueueExecutor$ThreadBody.run(EnhancedQueueExecutor.java:1452)
-        at org.jboss.threads.DelegatingRunnable.run(DelegatingRunnable.java:29)
-        at org.jboss.threads.ThreadLocalResettingRunnable.run(ThreadLocalResettingRunnable.java:29)
-        at java.base/java.lang.Thread.run(Thread.java:834)
-        at org.jboss.threads.JBossThread.run(JBossThread.java:479)
-
-HTTP/1.1 404 Not Found
-Content-Length: 0
-{
-    "birthdate": "2000/12/25",
-    "name": "Yamada",
-    "age": 20
-}
-{
-    "birthdate": "2000/12/25",
-    "name": "Yamada",
-    "age": 20
-}
-HTTP/1.1 200 OK
-Content-Length: 51
-Content-Type: application/json
-
-{
-    "birthdate": "2000/12/25",
-    "name": "Yamada",
-    "age": 20
-}
+...
 [INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.758 s - in com.example.sampleapp.rest.HelloResourceTest
 2020-12-26 17:56:38,036 INFO  [io.quarkus] (main) Quarkus stopped in 0.052s
 [INFO] 
@@ -714,14 +620,14 @@ Content-Type: application/json
 [INFO] ------------------------------------------------------------------------
 [INFO] BUILD SUCCESS
 [INFO] ------------------------------------------------------------------------
-[INFO] Total time:  15.200 s
-[INFO] Finished at: 2020-12-26T17:56:38+09:00
-[INFO] ------------------------------------------------------------------------
+...
 ```
 これまで作成したテストも含めて全て成功しました。
+発行したSQLを出力する設定にしているので、SQLも確認できます。
 
-以下のテストを追加します。
-レスポンスBodyをモデルクラスに変換して取得したり、リクエストBodyをモデルクラスのインスタンスの形で渡すことも可能です。
+
+次は以下のテストを追加します。
+REST-AssuredではレスポンスBodyをモデルクラスに変換して取得したり、リクエストBodyをモデルクラスのインスタンスの形で渡すことも可能です。
 ```java
     @Test
     public void testUpdateFruits() {
@@ -742,7 +648,7 @@ Content-Type: application/json
                 .then()
                 .statusCode(200);
 
-        //List all, cherry should be missing now:
+        //List all, cherry should be updated now:
         given()
                 .when().get("/fruits")
                 .then().log().body()
@@ -753,7 +659,8 @@ Content-Type: application/json
                         containsString("Banana"));
     }
 ```
-テスト結果も一応。
+
+テストを実行します。
 ```
 [INFO] -------------------------------------------------------
 [INFO]  T E S T S
@@ -870,51 +777,7 @@ Hibernate:
 ]
 [INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 8.273 s - in com.example.sampleapp.rest.FruitsEndpointTest
 [INFO] Running com.example.sampleapp.rest.HelloResourceTest
-2020-12-26 22:11:59,194 ERROR [com.exa.sam.res.FruitResource] (executor-thread-1) Failed to handle request: javax.ws.rs.NotFoundException: RESTEASY003210: Could not find resource for full path: http://localhost:8081/hello/404
-        at org.jboss.resteasy.core.registry.SegmentNode.match(SegmentNode.java:152)
-        at org.jboss.resteasy.core.registry.RootNode.match(RootNode.java:73)
-        at org.jboss.resteasy.core.registry.RootClassNode.match(RootClassNode.java:47)
-        at org.jboss.resteasy.core.ResourceMethodRegistry.getResourceInvoker(ResourceMethodRegistry.java:481)
-        at org.jboss.resteasy.core.SynchronousDispatcher.getInvoker(SynchronousDispatcher.java:330)
-        at org.jboss.resteasy.core.SynchronousDispatcher.lambda$invoke$4(SynchronousDispatcher.java:251)
-        at org.jboss.resteasy.core.SynchronousDispatcher.lambda$preprocess$0(SynchronousDispatcher.java:160)
-        at org.jboss.resteasy.core.interception.jaxrs.PreMatchContainerRequestContext.filter(PreMatchContainerRequestContext.java:364)
-        at org.jboss.resteasy.core.SynchronousDispatcher.preprocess(SynchronousDispatcher.java:163)
-        at org.jboss.resteasy.core.SynchronousDispatcher.invoke(SynchronousDispatcher.java:245)
-        at io.quarkus.resteasy.runtime.standalone.RequestDispatcher.service(RequestDispatcher.java:73)
-        at io.quarkus.resteasy.runtime.standalone.VertxRequestHandler.dispatch(VertxRequestHandler.java:132)
-        at io.quarkus.resteasy.runtime.standalone.VertxRequestHandler.access$000(VertxRequestHandler.java:37)
-        at io.quarkus.resteasy.runtime.standalone.VertxRequestHandler$1.run(VertxRequestHandler.java:94)
-        at org.jboss.threads.ContextClassLoaderSavingRunnable.run(ContextClassLoaderSavingRunnable.java:35)
-        at org.jboss.threads.EnhancedQueueExecutor.safeRun(EnhancedQueueExecutor.java:2046)
-        at org.jboss.threads.EnhancedQueueExecutor$ThreadBody.doRunTask(EnhancedQueueExecutor.java:1578)
-        at org.jboss.threads.EnhancedQueueExecutor$ThreadBody.run(EnhancedQueueExecutor.java:1452)
-        at org.jboss.threads.DelegatingRunnable.run(DelegatingRunnable.java:29)
-        at org.jboss.threads.ThreadLocalResettingRunnable.run(ThreadLocalResettingRunnable.java:29)
-        at java.base/java.lang.Thread.run(Thread.java:834)
-        at org.jboss.threads.JBossThread.run(JBossThread.java:479)
-
-HTTP/1.1 404 Not Found
-Content-Length: 0
-{
-    "birthdate": "2000/12/25",
-    "name": "Yamada",
-    "age": 20
-}
-{
-    "birthdate": "2000/12/25",
-    "name": "Yamada",
-    "age": 20
-}
-HTTP/1.1 200 OK
-Content-Length: 51
-Content-Type: application/json
-
-{
-    "birthdate": "2000/12/25",
-    "name": "Yamada",
-    "age": 20
-}
+...
 [INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.84 s - in com.example.sampleapp.rest.HelloResourceTest
 2020-12-26 22:12:00,110 INFO  [io.quarkus] (main) Quarkus stopped in 0.102s
 [INFO] 
@@ -925,9 +788,7 @@ Content-Type: application/json
 [INFO] ------------------------------------------------------------------------
 [INFO] BUILD SUCCESS
 [INFO] ------------------------------------------------------------------------
-[INFO] Total time:  17.163 s
-[INFO] Finished at: 2020-12-26T22:12:00+09:00
-[INFO] ------------------------------------------------------------------------
+...
 ```
 
 
