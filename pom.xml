@@ -80,10 +80,6 @@
       <version>2.26.3</version>
       <scope>test</scope>
     </dependency>
-    <dependency>
-      <groupId>io.quarkus</groupId>
-      <artifactId>quarkus-openshift</artifactId>
-    </dependency>
   </dependencies>
   <repositories>
     <repository>
@@ -135,8 +131,8 @@
         <configuration>
           <systemPropertyVariables>
             <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
-            <quarkus.log.level>INFO</quarkus.log.level>
-            <quarkus.log.file.path>app.log</quarkus.log.file.path>
+            <!-- <quarkus.log.level>INFO</quarkus.log.level>
+            <quarkus.log.file.path>app.log</quarkus.log.file.path> -->
             <maven.home>${maven.home}</maven.home>
           </systemPropertyVariables>
         </configuration>

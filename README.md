@@ -2,12 +2,8 @@ TODO
 - 説明文
 - 出力調整
 - ソースコメント
-- 図
-- ログ
-- レポート
-- パイプライン
 
-# API Test Automation Tutorial
+# API Test Automation Tutorial with Quarkus
 
 REST APIのテスト自動化のチュートリアルです。
 
@@ -20,11 +16,14 @@ REST APIのテスト自動化のチュートリアルです。
 
 ## 前提環境
 
-- OpenJDK11 (or 8)
-- Apache Maven
+- OpenJDK11 
+- Apache Maven 3.6.3
 - Docker
 
 ## プロジェクトの作成
+
+Quarkusにおける通常の方法でMavenプロジェクトを作成します。
+（当リポジトリをCloneして利用する場合はSkipして構いません）
 
 ```
 $ mvn io.quarkus:quarkus-maven-plugin:1.7.5.Final-redhat-00011:create \
@@ -38,12 +37,9 @@ $ mvn io.quarkus:quarkus-maven-plugin:1.7.5.Final-redhat-00011:create \
 [INFO] ------------------------------------------------------------------------
 [INFO] BUILD SUCCESS
 [INFO] ------------------------------------------------------------------------
-[INFO] Total time:  11.366 s
-[INFO] Finished at: 2020-12-24T16:27:30+09:00
-[INFO] ------------------------------------------------------------------------
+...
 ```
-
-![プロジェクト](./img/001.png)
+以下のような構造のプロジェクトが作成されます。
 
 ```
 \TESTAPP
@@ -70,9 +66,9 @@ $ mvn io.quarkus:quarkus-maven-plugin:1.7.5.Final-redhat-00011:create \
 ```
 
 pom.xmlには以下のような依存関係が定義されています。
-デフォルトでQuarkusのテスト支援機能やREST-Assuredが入っています。
-
+デフォルトでQuarkusのJUnit拡張機能やREST-Assuredが入っています。
 ```
+...
  <dependencies>
     <dependency>
       <groupId>io.quarkus</groupId>
@@ -89,11 +85,13 @@ pom.xmlには以下のような依存関係が定義されています。
       <scope>test</scope>
     </dependency>
   </dependencies>
+  ...
 ```
-quarkus-junit5はテストフレームワークを制御する@QuarkusTestアノテーションを提供しているので、テストには必須です。rest-assuredは必須ではありませんが、HTTPエンドポイントをテストするのに便利であり、統合によりURLを自動設定する機能を提供します。
+quarkus-junit5はテストフレームワークを制御する@QuarkusTestアノテーションを提供しているので、テストに必要です。REST-Assuredは必須ではありませんが、HTTPエンドポイントをテストする際、Quarkusとの統合によりエンドポイントURLを自動設定する機能を提供します。
 
 ## 実行確認
-サンプルアプリのソースコードです。
+
+プロジェクト内に生成されるサンプルアプリ（API）のソースコードです。
 
 ```java
 package com.example.sampleapp.rest;
@@ -114,7 +112,7 @@ public class HelloResource {
 }
 ```
 
-テストケースはこちらです。REST-Assuredベースの書き方になっています。
+テストケースも生成されます。REST-Assuredベースのスクリプトになっています。
 ```java
 package com.example.sampleapp.rest;
 
@@ -138,51 +136,29 @@ public class HelloResourceTest {
 
 }
 ```
-Rest Assuredは、Rest APIテストの自動化を可能にするJavaライブラリのグループです。
-Rest AssuredはJavaベースであり、学習にはコアJavaの知識があれば十分です。
-複雑な JSON 構造からリクエストとレスポンスの値を取得するのに役立ちます。
-APIリクエストは、ヘッダー、クエリ、パスパラメータ、任意のセッションやクッキーを設定してカスタマイズすることができます。
-アサート文や条件を設定するのに役立ちます。
-Rest AssuredはレスポンスがJSONタイプの場合に非常に便利ですが、コンテンツのタイプがHTMLやプレーンテキストの場合には、そのメソッドがシームレスに動作しないことがあります。
+RREST-Assuredは、Rest APIテストの自動化を可能にするJavaライブラリであり、Javaベースのため学習にはコアJavaの知識があれば十分です。
+テスト時にREST APIのリクエストとレスポンスの値を取得するのに役立ちます。
+APIへのリクエストは、ヘッダー、クエリ、パスパラメータ、任意のセッションやクッキーを設定してカスタマイズすることができます。
+Assert文や条件を設定するのも容易に行えます。
+REST-AssuredはレスポンスがJSONタイプの場合に非常に便利ですが、コンテンツのタイプがHTMLやプレーンテキストの場合には、そのメソッドがシームレスに動作しないことがあります。
 
-![REST-Assured Methods](./img/restassured.png)
+REST-Assuredで使用する主なメソッドです。
+- given : テストの開始時に呼び出し、リクエストのデフォルト設定を適用します。
+- when : テストの条件を記述します。HTTPメソッドやパラメータ等の設定を実施します。
+- then : テストの想定結果を記述します。記述にはHamcrestライブラリの柔軟なMatcherを使用できます。
 
 
 
 デフォルトで用意されたテストを実行します。
 
 ```txt
-% cd testapp 
-% mvn clean verify
+$ cd testapp 
+$ mvn clean verify
 [INFO] Scanning for projects...
 [INFO] 
 [INFO] ------------------------< com.example:testapp >-------------------------
 [INFO] Building testapp 1.0-SNAPSHOT
-[INFO] --------------------------------[ jar ]---------------------------------
-[INFO] 
-[INFO] --- maven-clean-plugin:2.5:clean (default-clean) @ testapp ---
-[INFO] 
-[INFO] --- quarkus-maven-plugin:1.7.5.Final-redhat-00011:generate-code (default) @ testapp ---
-[INFO] 
-[INFO] --- maven-resources-plugin:2.6:resources (default-resources) @ testapp ---
-[INFO] Using 'UTF-8' encoding to copy filtered resources.
-[INFO] Copying 2 resources
-[INFO] 
-[INFO] --- maven-compiler-plugin:3.8.1:compile (default-compile) @ testapp ---
-[INFO] Changes detected - recompiling the module!
-[INFO] Compiling 1 source file to /Users/nkoike/trial/quarkus/rhboq/testapp/target/classes
-[INFO] 
-[INFO] --- quarkus-maven-plugin:1.7.5.Final-redhat-00011:generate-code-tests (default) @ testapp ---
-[INFO] 
-[INFO] --- maven-resources-plugin:2.6:testResources (default-testResources) @ testapp ---
-[INFO] Using 'UTF-8' encoding to copy filtered resources.
-[INFO] skip non existing resourceDirectory /Users/nkoike/trial/quarkus/rhboq/testapp/src/test/resources
-[INFO] 
-[INFO] --- maven-compiler-plugin:3.8.1:testCompile (default-testCompile) @ testapp ---
-[INFO] Changes detected - recompiling the module!
-[INFO] Compiling 2 source files to /Users/nkoike/trial/quarkus/rhboq/testapp/target/test-classes
-[INFO] 
-[INFO] --- maven-surefire-plugin:3.0.0-M5:test (default-test) @ testapp ---
+...
 [INFO] 
 [INFO] -------------------------------------------------------
 [INFO]  T E S T S
@@ -198,35 +174,29 @@ Rest AssuredはレスポンスがJSONタイプの場合に非常に便利です�
 [INFO] 
 [INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0
 [INFO] 
-[INFO] 
-[INFO] --- maven-jar-plugin:2.4:jar (default-jar) @ testapp ---
-[INFO] Building jar: /Users/nkoike/trial/quarkus/rhboq/testapp/target/testapp-1.0-SNAPSHOT.jar
-[INFO] 
-[INFO] --- quarkus-maven-plugin:1.7.5.Final-redhat-00011:build (default) @ testapp ---
-[INFO] [org.jboss.threads] JBoss Threads version 3.1.1.Final-redhat-00001
-[INFO] [io.quarkus.deployment.pkg.steps.JarResultBuildStep] Building thin jar: /Users/nkoike/trial/quarkus/rhboq/testapp/target/testapp-1.0-SNAPSHOT-runner.jar
-[INFO] [io.quarkus.deployment.QuarkusAugmentor] Quarkus augmentation completed in 946ms
+...
 [INFO] ------------------------------------------------------------------------
 [INFO] BUILD SUCCESS
 [INFO] ------------------------------------------------------------------------
-[INFO] Total time:  9.283 s
-[INFO] Finished at: 2020-12-24T16:59:59+09:00
-[INFO] ------------------------------------------------------------------------
+...
 ```
 
-Quarkusアプリ（API）がテスト時に起動し、テストが実施されました。
-起動時のPortはREST-Assured統合により自動設定されます。（デフォルト8081）プロパティで変更することも可能です。
+Quarkusのサンプルアプリ（API）がテスト時に起動し、テストが実施されました。
+起動時のPortはREST-Assured統合により自動設定されます（デフォルト8081）。プロパティで変更することも可能です。
 
+---
 ## 基本的なQuarkusアプリケーションのテスト
 
 ### サンプルアプリへの機能追加
 
-JSON-B Extensionを追加
+サンプルアプリに新たなエンドポイントを追加し、それに対するテストも追加してみます。
+
+JSON-B Extensionを追加します。
 ```
 $ mvn quarkus:add-extensions -Dextensions="resteasy-jsonb"  
 ```
 
-メソッドを追加
+サンプルアプリに以下のメソッドを追加します。
 ```java
     @GET
     @Path("/json")
@@ -241,31 +211,32 @@ $ mvn quarkus:add-extensions -Dextensions="resteasy-jsonb"
         return res;
     }
 ```
-以下のJSONを返します
+
+このメソッドによるエンドポイントは以下のJSONを返します。
 ```
 $ curl http://localhost:8080/hello/json
 {"birthdate":"2000/12/25","name":"Yamada","age":20}
 ```
-### テストの修正
 
-HelloResourceTestには以下を追加
+
+### テストの追加
+
+テストのサンプルであるHelloResourceTestには以下を追加します。
 ```java
     @Test
     public void testJson() {
       given()
         .when().get("/hello/json")
         .then()
-          .log().all()
-          .assertThat()
-          .body(containsString("Yamada"));
-
+          .log().all()                      // レスポンスを標準出力
+          .body(containsString("Yamada"));  // Body内の文字列を検証
     }
 ```
-以下のimport文も追加しておきます。
+以下のimport文も追加しておきます。Hamcrestの構文を使用するためです。
 ```java
 import static org.hamcrest.Matchers.*;
 ```
-テストを実行
+テストを実行します。
 ```
 $ mvn test
 ...
@@ -295,29 +266,25 @@ Content-Type: application/json
 [INFO] ------------------------------------------------------------------------
 [INFO] BUILD SUCCESS
 [INFO] ------------------------------------------------------------------------
-[INFO] Total time:  12.024 s
-[INFO] Finished at: 2020-12-25T23:38:52+09:00
-[INFO] ------------------------------------------------------------------------
+...
 ```
-追加したテストも成功。
-レスポンスの内容も出力されています。
+追加したテストも成功しました。
+レスポンスの内容も標準出力されています。
 
-次は以下のテストを追加。
-JSONをParseしてプロパティの値をAssertします。
+次は以下のテストを追加します。
+ここではレスポンスのJSONをParseしてプロパティの値を検証します。
 ```java
    @Test
     public void testJson2() {
       given()
         .when().get("/hello/json")
         .then()
-          .log().body()
-          .assertThat()
-          .body("age",equalTo("20"));
-
+          .log().body()               // レスポンスBody出力
+          .body("age",equalTo(20));   // ageプロパティの数値を検証
     }
 
 ```
-今度はレスポンスのbodyを出力して成功。
+今回はレスポンスのbodyのみを出力して成功します。
 ```
 $ mvn test
 ...

@@ -37,8 +37,7 @@ public class HelloResourceTest {
       given()
         .when().get("/hello/json")
         .then()
-          // .log().all()
-          .assertThat()
+          .log().all()
           .body(containsString("Yamada"));
 
     }
@@ -49,7 +48,6 @@ public class HelloResourceTest {
         .when().get("/hello/json")
         .then()
           // .log().body()
-          .assertThat()
           .body("age",equalTo(20));
 
     }
@@ -60,7 +58,6 @@ public class HelloResourceTest {
         .when().get("/hello/json")
         .then()
           // .log().body()
-          .assertThat()
           .body("birthdate",not(empty()))
           .body("name", equalToIgnoringCase("yamada"))
           .body("gender",nullValue())
