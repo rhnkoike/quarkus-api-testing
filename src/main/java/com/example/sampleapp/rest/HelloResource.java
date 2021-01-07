@@ -26,10 +26,6 @@ public class HelloResource {
         res.put("name","Yamada");
         res.put("age",20);
         res.put("birthdate","2000/12/25");
-        Map<String,Object> job = new HashMap<>();
-        job.put("title","Student");
-        job.put("belongto","Nihon Univ.");
-        res.put("occupation",job);
 
         return res;
     }
