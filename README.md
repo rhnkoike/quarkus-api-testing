@@ -1,14 +1,9 @@
-TODO
-- 説明文
-- 出力調整
-- ソースコメント
-
 # API Test Automation Tutorial with Quarkus
 
 REST APIのテスト自動化のチュートリアルです。
 
 このチュートリアルでは、以下を通してQuarkusで実装するREST APIのテストを自動化する方法について学習します。
-- プロジェクトの作成
+- [プロジェクトの作成](#プロジェクトの作成)
 - 基本的なQuarkusアプリケーションのテスト作成
 - DBを使用するQuarkusアプリケーションのテスト作成
 - 外部APIを使用するQuarkusアプリケーションのテスト作成
@@ -22,7 +17,7 @@ REST APIのテスト自動化のチュートリアルです。
 
 ## プロジェクトの作成
 
-Quarkusにおける通常の方法でMavenプロジェクトを作成します。
+Quarkusにおける通常の方法でMavenプロジェクトを作成します。  
 （当リポジトリをCloneして利用する場合はSkipして構いません）
 
 ```
@@ -65,7 +60,7 @@ $ mvn io.quarkus:quarkus-maven-plugin:1.7.5.Final-redhat-00011:create \
                         └─rest
 ```
 
-pom.xmlには以下のような依存関係が定義されています。
+pom.xmlには以下のような依存関係が定義されています。  
 デフォルトでQuarkusのJUnit拡張機能やREST-Assuredが入っています。
 ```
 ...
@@ -136,17 +131,17 @@ public class HelloResourceTest {
 
 }
 ```
-RREST-Assuredは、Rest APIテストの自動化を可能にするJavaライブラリであり、Javaベースのため学習にはコアJavaの知識があれば十分です。
-テスト時にREST APIのリクエストとレスポンスの値を取得するのに役立ちます。
-APIへのリクエストは、ヘッダー、クエリ、パスパラメータ、任意のセッションやクッキーを設定してカスタマイズすることができます。
-Assert文や条件を設定するのも容易に行えます。
-REST-AssuredはレスポンスがJSONタイプの場合に非常に便利ですが、コンテンツのタイプがHTMLやプレーンテキストの場合には、そのメソッドがシームレスに動作しないことがあります。
+RREST-Assuredは、Rest APIテストの自動化を可能にするJavaライブラリであり、Javaベースのため学習にはコアJavaの知識があれば十分です。  
+テスト時にREST APIのリクエストとレスポンスの値を取得したり、APIへのリクエストにヘッダー、クエリ、パスパラメータ、任意のセッションやクッキーを設定してカスタマイズすることができます。
+Assert文や条件を設定するのも容易に行えます。  
 
 REST-Assuredで使用する主なメソッドです。
 - given : テストの開始時に呼び出し、リクエストのデフォルト設定を適用します。
 - when : テストの条件を記述します。HTTPメソッドやパラメータ等の設定を実施します。
 - then : テストの想定結果を記述します。記述にはHamcrestライブラリの柔軟なMatcherを使用できます。
 
+REST-Assuredについて詳しくは以下を参照ください。
+- [Usage · rest-assured/rest-assured Wiki](https://github.com/rest-assured/rest-assured/wiki/Usage)
 
 
 デフォルトで用意されたテストを実行します。
@@ -181,7 +176,7 @@ $ mvn clean verify
 ...
 ```
 
-Quarkusのサンプルアプリ（API）がテスト時に自動で起動し、テストが実施されました。
+Quarkusのサンプルアプリ（API）がテスト時に自動で起動し、テストが実施されました。  
 起動時のPortはREST-Assured統合により自動設定されます（デフォルト8081）。プロパティで変更することも可能です。
 
 ---
@@ -191,7 +186,7 @@ REST-Assuredを使った基本的なREST APIのテストについて見ていき
 
 ### サンプルアプリへの機能追加
 
-サンプルアプリに新たなエンドポイントを追加し、それに対するテストも追加してみます。
+サンプルアプリに新たなエンドポイントを追加し、それに対するテストも追加してみます。  
 
 JSON-B Extensionを追加します。
 ```
@@ -270,10 +265,10 @@ Content-Type: application/json
 [INFO] ------------------------------------------------------------------------
 ...
 ```
-追加したテストも成功しました。
+追加したテストも成功しました。  
 レスポンスの内容も標準出力されています。
 
-次は以下のテストを追加します。
+次は以下のテストを追加します。  
 ここではレスポンスのJSONをParseしてプロパティの値を検証します。
 ```java
    @Test
@@ -323,7 +318,7 @@ Content-Type: application/json
 [INFO] ------------------------------------------------------------------------
 ...
 ```
-次は以下のテストを追加します。
+次は以下のテストを追加します。  
 レスポンスJSON上の複数項目の検証を行います。
 ```java
 @Test
@@ -417,18 +412,18 @@ Content-Type: text/html;charset=UTF-8
 DBを使用するREST APIのテストについて、より複雑なパターンも交えて見ていきます。
 
 ### サンプルアプリへの機能追加
-ここではJPAによるDBアクセスを行うAPIエンドポイントを追加します。
+ここではJPAによるDBアクセスを行うAPIエンドポイントを追加します。  
 Hibernate ORM拡張のquickstartからサンプルアプリを拝借します。
 
 以下のソースファイルを追加します。
 - [FruitResource.java](./src/main/java/com/example/sampleapp/rest/FruitResource.java)
 - [Fruit.java](./src/main/java/com/example/sampleapp/rest/Fruit.java)
 
-resourceフォルダに以下のリソースファイルを追加します。
+resourceフォルダに以下のリソースファイルを追加します。  
 このSQLファイルはDB初期化時に実行されます。
 - [import.sql](./src/main/resource/import.sql)
 
-application.propertiesに以下の定義を追加します。
+application.propertiesに以下の定義を追加します。  
 DB接続情報および初期化のための設定になります。
 DBはインメモリDB（H2）を使用します。
 ```properties
@@ -622,11 +617,11 @@ Hibernate:
 [INFO] ------------------------------------------------------------------------
 ...
 ```
-これまで作成したテストも含めて全て成功しました。
+これまで作成したテストも含めて全て成功しました。  
 発行したSQLを出力する設定にしているので、SQLも確認できます。
 
 
-次は以下のテストを追加します。
+次は以下のテストを追加します。  
 REST-AssuredではレスポンスBodyをモデルクラスに変換して取得したり、リクエストBodyをモデルクラスのインスタンスの形で渡すことも可能です。
 ```java
     @Test
@@ -794,11 +789,12 @@ Hibernate:
 
 ### モードによるDBの切り替え
 
-テストの際はインメモリDBではなく別で稼働するDBへ実際に接続してテストを実行するようにモードによる切り替えを行います。
+テストの際はインメモリDBではなく別で稼働するDBへ実際に接続してテストを実行するようにモード（プロファイル）による切り替えを行います。
 
-DBはPostgreSQLのDockerコンテナを使用します。（Docker環境がない場合はSkipしてください）
+DBはPostgreSQLのDockerコンテナを使用します。  
+（Docker環境がない場合はSkipしてください）
 
-application.propertiesを以下のように変更します。
+application.propertiesを以下のように変更します。  
 %{mode}.～の定義はモード別の設定を示します。%devはDEVモード、%testはTESTモードの設定です。
 ```
 quarkus.datasource.username=quarkus_test
@@ -810,6 +806,7 @@ quarkus.datasource.password=quarkus_test
 %test.quarkus.datasource.jdbc.url=jdbc:postgresql://localhost/quarkus_test
 %test.quarkus.datasource.jdbc.driver=org.postgresql.Driver
 ```
+この設定変更により、テスト実行時には同じホスト上のPostgreSQLにDBアクセスすることになります。  
 
 Extensionを追加します。PostgreSQL接続用ドライバの拡張になります。
 ```
@@ -817,7 +814,7 @@ $ mvn quarkus:add-extensions -Dextensions="jdbc-postgres"
 ...
 ```
 
-DBを起動します。今回はPostgreSQLのDockerコンテナを使用します。
+DBを起動します。今回はPostgreSQLのDockerコンテナをテスト用DBとして使用します。
 ```
 $ docker run --ulimit memlock=-1:-1 -it --rm=true --memory-swappiness=0 --name quarkus_test -e POSTGRES_USER=quarkus_test 
 -e POSTGRES_PASSWORD=quarkus_test -e POSTGRES_DB=quarkus_test -p 5432:5432 postgres:10.5
@@ -835,7 +832,7 @@ PostgreSQL init process complete; ready for start up.
 2020-12-27 06:11:40.724 UTC [1] LOG:  database system is ready to accept connections
 ```
 
-テストを実行します。余計な標準出力は抑止してあります。
+テストを実行します。
 ```
 $ mvn test
 ...
@@ -843,7 +840,7 @@ $ mvn test
 [INFO]  T E S T S
 [INFO] -------------------------------------------------------
 [INFO] Running com.example.sampleapp.rest.FruitsEndpointTest
-2020-12-27 15:36:35,084 WARN  [io.qua.config] (main) Unrecognized configuration key "quarkus.http.test-timeout" was provided; it will be ignored; verify that the dependency extension for this configuration is set or you did not make a typo
+...
 2020-12-27 15:36:36,571 WARN  [org.hib.eng.jdb.spi.SqlExceptionHelper] (main) SQL Warning Code: 0, SQLState: 00000
 2020-12-27 15:36:36,571 WARN  [org.hib.eng.jdb.spi.SqlExceptionHelper] (main) table "known_fruits" does not exist, skipping
 2020-12-27 15:36:36,573 WARN  [org.hib.eng.jdb.spi.SqlExceptionHelper] (main) SQL Warning Code: 0, SQLState: 00000
@@ -852,25 +849,20 @@ $ mvn test
 2020-12-27 15:36:37,222 INFO  [io.quarkus] (main) Profile test activated. 
 2020-12-27 15:36:37,222 INFO  [io.quarkus] (main) Installed features: [agroal, cdi, hibernate-orm, jdbc-h2, jdbc-postgresql, mutiny, narayana-jta, rest-client, resteasy, resteasy-jackson, resteasy-jsonb, smallrye-context-propagation]
 [INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 8.083 s - in com.example.sampleapp.rest.FruitsEndpointTest
-[INFO] Running com.example.sampleapp.rest.GreetingResourceTest
-called mock service
-[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.024 s - in com.example.sampleapp.rest.GreetingResourceTest
 [INFO] Running com.example.sampleapp.rest.HelloResourceTest
 [INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.762 s - in com.example.sampleapp.rest.HelloResourceTest
 2020-12-27 15:36:40,608 INFO  [io.quarkus] (main) Quarkus stopped in 0.046s
 [INFO]
 [INFO] Results:
 [INFO]
-[INFO] Tests run: 8, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Tests run: 7, Failures: 0, Errors: 0, Skipped: 0
 [INFO]
 [INFO] ------------------------------------------------------------------------
 [INFO] BUILD SUCCESS
 [INFO] ------------------------------------------------------------------------
-[INFO] Total time:  16.567 s
-[INFO] Finished at: 2020-12-27T15:36:40+09:00
-[INFO] ------------------------------------------------------------------------
+...
 ```
-DBのテーブルを確認してみます。
+コンテナでSQLを実行してDBのテーブルを確認してみます。
 ```
 $ docker exec -it quarkus_test psql -U quarkus_test -c "select * from known_fruits;"
  id |  name
@@ -883,21 +875,24 @@ $ docker exec -it quarkus_test psql -U quarkus_test -c "select * from known_frui
 ```
 処理結果がコンテナ上のDBに反映されています。
 
+---
 
-## 外部APIを呼び出すQuarkusアプリのテスト
+## 外部APIを呼び出すQuarkusアプリケーションのテスト
 
-### サンプルアプリの追加
+API内部で他のAPIを呼び出すREST APIのテストについても見ていきます。
+
+### サンプルアプリへの機能追加
 以下のソースファイルを追加します。
 - [GreetingResource.java](./src/main/java/com/example/sampleapp/rest/GreetingResource.java)
 - [GreetingService.java](./src/main/java/com/example/sampleapp/rest/GreetingService.java)
-- [GreetingExtResource.java](./src/main/java/com/example/sampleapp/external/GreetingExtResource.java) (これが外部API相当のリソースです)
+- [GreetingExtResource.java](./src/main/java/com/example/sampleapp/external/GreetingExtResource.java)   (これが外部API相当のリソースです)
 
-Extensionを追加します。
+REST Client Extensionを追加します。
 ```
 $ mvn quarkus:add-extensions -Dextensions="rest-client"
 ```
 
-GreetingResourceはMicroProfile RestClientのクライアントインターフェースとして以下のように定義されたGreetingServiceを経由してGreetingExtResourceを呼び出します。
+`GreetingResource`はMicroProfile RestClientのクライアントインターフェースとして以下のように定義された`GreetingService`を経由して`GreetingExtResource`を呼び出します。
 ```java
 @Path("/")
 @ApplicationScoped
@@ -910,21 +905,23 @@ public interface GreetingService {
     String hello();
 }
 ```
-通常のDEVモードでQuarkusアプリを起動して確認してみます。
+通常のDEVモードでQuarkusを起動して確認してみます。
 ```
 $ mvn compile quarkus:dev
 ...
 ```
+パスパラメータからシンプルな文字列を生成して返すだけです。
 ```
 $ curl http://localhost:8080/greeting/test 
 Hello test
 ```
+  
 
 ### テストの追加
 以下のテストを追加します。
 - [GreetingResourceTest.java](./src/test/java/com/example/sampleapp/rest/GreetingResourceTest.java)
 
-先ほどの確認と同じ内容です。
+テストの内容は先ほどの確認と同じ内容です。
 ```java
     @Test
     public void testHelloEndpoint() {
@@ -936,16 +933,16 @@ Hello test
              .body(is("Hello test"));
     }
 ```
-テストを実行します。
-出力がわかりにくくなったので他のテストの出力は一旦止めておきます。
+テストを実行します。  
+（出力が増えてわかりにくくなった場合は他のテストの出力は一旦コメントアウトして止めてください。）
 
-まずDEVモードで起動します。これは外部APIとして動作させるためです。
+まずDEVモードで起動します。これは`GreetingExtResource`を外部APIとして動作させておくためです。
 ```
 $ mvn compile quarkus:dev
 ...
 ```
 
-このまま別のコンソールでテストを実行します。
+このまま別のコンソールを立ち上げてテストを実行します。
 ```
 $ mvn test
 ...
@@ -953,7 +950,6 @@ $ mvn test
 [INFO]  T E S T S
 [INFO] -------------------------------------------------------
 [INFO] Running com.example.sampleapp.rest.FruitsEndpointTest
-2020-12-27 01:25:55,280 WARN  [io.qua.config] (main) Unrecognized configuration key "quarkus.http.test-timeout" was provided; it will be ignored; verify that the dependency extension for this configuration is set or you did not make a typo
 2020-12-27 01:25:57,215 INFO  [io.quarkus] (main) Quarkus 1.7.5.Final-redhat-00011 on JVM started in 4.440s. Listening on: http://0.0.0.0:8081
 2020-12-27 01:25:57,215 INFO  [io.quarkus] (main) Profile test activated. 
 2020-12-27 01:25:57,216 INFO  [io.quarkus] (main) Installed features: [agroal, cdi, hibernate-orm, jdbc-h2, mutiny, narayana-jta, rest-client, resteasy, resteasy-jackson, resteasy-jsonb, smallrye-context-propagation]
@@ -971,19 +967,20 @@ $ mvn test
 [INFO] ------------------------------------------------------------------------
 [INFO] BUILD SUCCESS
 [INFO] ------------------------------------------------------------------------
-[INFO] Total time:  15.391 s
-[INFO] Finished at: 2020-12-27T01:26:00+09:00
-[INFO] ------------------------------------------------------------------------
+...
 ```
-テストが成功しました。DEVモード側も停止してください。
+追加したテストが成功しました。  
+別コンソールのDEVモード側も停止してください。  
+
 
 ### 外部APIをMockする
-外部API（GreetingExtResource）の実行をMockに置き換えてみます。
+外部API（`GreetingExtResource`）の実行をMockに置き換えてみます。
 
 以下のソースファイルをテストと同じフォルダに追加します。
--[GreetingMockService.java](./src/test/java/com/example/sampleapp/rest/GreetingMockService.java)
+- [GreetingMockService.java](./src/test/java/com/example/sampleapp/rest/GreetingMockService.java)
 
-これがGreetingServiceのMockとなります。Mockされたことがわかるように戻り値のStringを変えてあります。
+これが`GreetingService`のMockとなります。`@Mock`を指定しています。  
+Mockされたことがわかるように戻り値のStringを変えてあります。
 ```java
 @Mock
 @RestClient
@@ -999,8 +996,8 @@ public class GreetingMockService implements GreetingService{
 }
 ```
 
-テスト（GreetingResourceTest）を以下のように変更します。
-Mockされたことがわかるように検証用の想定結果も変更してあります。
+テスト（`GreetingResourceTest`）を以下のように変更します。  
+Mockされたことがわかるように検証用の想定結果も一旦変更しておきます。
 ```java
 @QuarkusTest
 public class GreetingResourceTest {
@@ -1013,12 +1010,13 @@ public class GreetingResourceTest {
           .then()
              .statusCode(200)
             //  .body(is("Hello test"));
-            .body(is("Hi test"));
+            .body(endsWith(" test"));     // 一旦変更
     }
 
 ```
 
-テストを実行します。別コンソールでDEVモードでの起動は不要です。
+テストを実行します。  
+別コンソールでのDEVモードの起動は不要です。
 ```
 $ mvn test
 ...
@@ -1026,7 +1024,6 @@ $ mvn test
 [INFO]  T E S T S
 [INFO] -------------------------------------------------------
 [INFO] Running com.example.sampleapp.rest.FruitsEndpointTest
-2020-12-27 02:29:42,749 WARN  [io.qua.config] (main) Unrecognized configuration key "quarkus.http.test-timeout" was provided; it will be ignored; verify that the dependency extension for this configuration is set or you did not make a typo
 2020-12-27 02:29:44,594 INFO  [io.quarkus] (main) Quarkus 1.7.5.Final-redhat-00011 on JVM started in 4.446s. Listening on: http://0.0.0.0:8081
 2020-12-27 02:29:44,594 INFO  [io.quarkus] (main) Profile test activated.
 2020-12-27 02:29:44,595 INFO  [io.quarkus] (main) Installed features: [agroal, cdi, hibernate-orm, jdbc-h2, mutiny, narayana-jta, rest-client, resteasy, resteasy-jackson, resteasy-jsonb, smallrye-context-propagation]
@@ -1045,26 +1042,24 @@ called mock service
 [INFO] ------------------------------------------------------------------------
 [INFO] BUILD SUCCESS
 [INFO] ------------------------------------------------------------------------
-[INFO] Total time:  18.571 s
-[INFO] Finished at: 2020-12-27T02:29:47+09:00
-[INFO] ------------------------------------------------------------------------
+...
 ```
-成功しました。よく見るとMockが標準出力した`called mock service`もちゃんと出ています。
+成功しました。よく見るとMockが標準出力した`called mock service`が出力されています。
 
+---
 
+## 自動化のためのテスト用リソースのセットアップ
 
-## 機能テスト自動化のためのテスト用リソースのセットアップ
-
-インメモリDBや外部APIのMockによって機能テストの自動化は容易になります。
-但し実際のDBMSを使用したい場合やHTTPによる通信を実行したい場合はそのためのDBやAPI（スタブの場合あり）を事前に起動してテストを実施する必要があります。
-機能テストの一連の操作を自動化するため、外部リソース起動についても自動化を実施します。
+インメモリDBや外部APIのMockによって機能テストの一括実行は容易になります。  
+但し実際のDBMSを使用したい場合やHTTPによる通信を実行したい場合は、そのためのDBやAPI（スタブの場合あり）を事前に起動してテストを実施する必要があります。  
+機能テストの一連の操作を自動化するため、これら外部リソースの起動についても自動化を実施します。
 
 以下のような状態を目指すことになります。
 ![testing.png](./img/testing.png)
 
 ### DBセットアップ自動化
-テスト用DBのコンテナ起動を自動化します。
-Dockerコンテナの操作をテストに組み込むにはTestContainerライブラリを使用します。
+テスト用DBのコンテナ起動を自動化します。  
+Dockerコンテナの操作をテストに組み込むにはTestcontainerライブラリを使用します。
 
 pom.xmlに以下の依存関係を追加します。
 ```xml
@@ -1075,7 +1070,7 @@ pom.xmlに以下の依存関係を追加します。
       <scope>test</scope>
     </dependency>
 ```
-以下のソースファイルをテストフォルダに追加します。
+以下のソースファイルをtestフォルダに追加します。
 - [TestDatabase.java](./src/test/java/com/example/sampleapp/rest/TestDatabase.java)
 
 このクラスは`QuarkusTestResourceLifecycleManager`インターフェースを実施しており、テストの開始前にPostgreSQLコンテナの起動を実行します。
@@ -1104,7 +1099,7 @@ public class TestDatabase implements QuarkusTestResourceLifecycleManager {
 }
 
 ```
-このPostgreSQLコンテナを使用するテスト（FruitsEndpointTest）に`@QuarkusTestResource`を追加します。
+このPostgreSQLコンテナを使用するテスト（`FruitsEndpointTest`）に`@QuarkusTestResource`を以下のように追加します。
 ```java
 
 @QuarkusTest
@@ -1156,12 +1151,12 @@ $ mvn test
 [INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 15.001 s - in com.example.sampleapp.rest.FruitsEndpointTest
 ...
 ```
-PostgreSQLコンテナが自動で起動し、テストが成功します。
+PostgreSQLコンテナが自動で起動し、今までのテストが成功します。
 
-### 外部API（スタブ）セットアップの自動化
+### 外部APIセットアップの自動化
 
-テスト用外部APIのスタブサーバーを自動で起動します。
-先ほどはQuarkusアプリを起動していましたが、以下では[ここを参考に](https://quarkus.io/guides/rest-client#using-a-mock-http-server-for-tests)Wiremockによるスタブサーバーを使用します。
+テスト用外部APIのスタブサーバーを自動で起動します。  
+先ほどはQuarkusを別コンソールで起動していましたが、以下では[ここを参考に](https://quarkus.io/guides/rest-client#using-a-mock-http-server-for-tests)Wiremockによるスタブサーバーを使用します。  
 
 pom.xmlに以下の依存関係を追加します。
 ```xml
@@ -1207,9 +1202,9 @@ public class TestStubService implements QuarkusTestResourceLifecycleManager {
 }
 
 ```
-先ほどのMockと同じ動作を実行するスタブサーバーになります。
+これが先ほどのMockと同じ動作を実行するスタブサーバーになります。
 
-このスタブサーバーを使用するテスト（GreetingResourceTest）に`@QuarkusTestResource`を追加します。
+このスタブサーバーを使用するテスト（`GreetingResourceTest`）に`@QuarkusTestResource`を追加します。
 ```java
 
 @QuarkusTest
@@ -1217,7 +1212,7 @@ public class TestStubService implements QuarkusTestResourceLifecycleManager {
 public class GreetingResourceTest {
 ...
 ```
-先ほどのMock（GreetingMockService）があるとそちらが使われてしまうので、無効化しておきます。
+先ほどのMock（`GreetingMockService`）があるとそちらが使われてしまうので、アノテーションを外して無効化しておきます。
 ```java
 // @Mock
 // @RestClient
@@ -1246,13 +1241,14 @@ Hi test
 [INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.111 s - in com.example.sampleapp.rest.GreetingResourceTest
 ...
 ```
-スタブサーバーが自動で起動し、テストが成功します。
+スタブサーバーが自動で起動し、今までのテストが成功します。  
+これで外部リソースの起動を含めたテスト実行が自動化できました。
 
-
+---
 
 ### （参考）テスト実行フェーズの指定
 
-単体テストと機能テストが同じプロジェクト内に配置している場合などのため、[ここを参考に](https://quarkus.io/guides/tests-with-coverage#separating-executions-of-unit-tests-and-integration-tests)テストに対して実行するフェーズを指定します。
+同じプロジェクト内の単体テストと機能テストを分けて実行したい場合を想定し、[ここを参考に](https://quarkus.io/guides/tests-with-coverage#separating-executions-of-unit-tests-and-integration-tests)各テストに対して実行するフェーズを指定する方法を確認します。
 
 `integration`タグを対象の機能テストに付与します。タグを付与するには`@Tag`を使用します。
 ```java
@@ -1262,8 +1258,10 @@ Hi test
 public class FruitsEndpointTest {
 ...
 ```
+今回は`FruitsEndpointTest`のみを対象にします。
 
-pom.xmlで対象のテストの実行フェーズを指定します。以下が`integration`タグの付いたテストはintegration-testフェーズでのみ実行するという指定になります。
+pom.xmlで対象のテストの実行フェーズを指定します。  
+以下が`integration`タグの付いたテストはintegration-testフェーズでのみ実行するという指定になります。
 ```xml
 ...
 <plugin>
@@ -1353,6 +1351,13 @@ $ mvn clean verify
 ```
 対象のテストのみがintegration-testフェーズで実行されていることがわかります。
 
+---
+## パイプラインでのテスト自動化
+
+以下を参照ください。
+- [パイプラインでのテスト自動化](./pipeline.md)
+
+---
 ## おわりに
 
 Quarkusを利用したREST APIのテスト自動化について学習しました。
