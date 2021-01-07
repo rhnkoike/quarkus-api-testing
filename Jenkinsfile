@@ -6,20 +6,30 @@ node('maven') {
 	def appName = "testapp"
 	def devPrj = "dev"
 
+	stage('java version') {
+		sh "java -version"
+		sh "mvn -version"
+		// sh "echo $JAVA_HOME"
+	}
+
 	stage('Cleanup env Dev') {
 		// Delete all objects except for is.
 		openshift.withCluster() {
 			openshift.withProject(devPrj) {
-			    openshift.selector("bc", [ app: appName ]).delete()
-			    openshift.selector("dc", [ app: appName ]).delete()
-			    openshift.selector("svc", [ app: appName ]).delete()
-			    openshift.selector("pod", [ app: appName ]).delete()
-			    openshift.selector("route", [ app: appName ]).delete()
+			    openshift.selector("bc", [ "app.kubernetes.io/name": appName ]).delete()
+			    openshift.selector("dc", [ "app.kubernetes.io/name": appName ]).delete()
+			    openshift.selector("svc", [ "app.kubernetes.io/name": appName ]).delete()
+			    openshift.selector("pod", [ "app.kubernetes.io/name": appName ]).delete()
+			    openshift.selector("route", [ "app.kubernetes.io/name"
+				: appName ]).delete()
+				openshift.selector("secret", [ "app.kubernetes.io/name": appName ]).delete()
 			}
 		}
+
 	}
 
 	stage('Checkout Source') {
+		// 注意：Checkoutするブランチは"master"で固定されています
 		checkout scm
 	}
 
@@ -36,67 +46,36 @@ node('maven') {
 		}
 
 		echo "Building version ${version}"
-		sh "${mvnCmd} clean package -DskipTests"
+		sh "${mvnCmd} clean compile"
 	}
 
-	stage('Unit Tests') {
-		echo "Unit Tests"
+	stage('Tests') {
+
+		// Prepare Test - DB start
+		openshift.withCluster() {
+			openshift.withProject(devPrj) {
+			    openshift.newApp("postgresql-ephemeral",
+								"-p DATABASE_SERVICE_NAME=postgresql",
+								"-p POSTGRESQL_DATABASE=quarkus_test",
+								"-p POSTGRESQL_USER=quarkus_test",
+								"-p POSTGRESQL_PASSWORD=quarkus_test",
+								"-l app.kubernetes.io/name=${appName}"
+				)
+			}
+		}
+
+		echo "Unit&Integration Tests"
 		sh "${mvnCmd} test"
 	}
 
 	def newTag = "dev-${version}"
 
-	stage('Build Image') {
-		echo "New Tag: ${newTag}"
-
-		echo "Building image ${newTag}"
-		sh "${mvnCmd} clean package -Dquarkus.container-image.build=true -DskipTests"
-
-		// Copy the war file and other artifaces to deployments directory.
-		// sh "mkdir -p deployments"
-		// sh "cp ./terasoluna-tourreservation-web/target/terasoluna-tourreservation-web.war ./deployments/ROOT.war"
-		// sh "cp -a ./.s2i ./deployments/"
-
-		// // Start Binary Build in OpenShift using the file we just published
-		// openshift.withCluster() {
-		// 	openshift.withProject(devPrj) {
-		// 		if (!openshift.selector("is", appName).exists()) {
-		// 			// Create imageStream from file "openshift/sampleweb-is.yaml".
-		// 			openshift.create(readFile("openshift/$appName-is.yaml"))
-		// 		}
-		// 		// Create buildConfig from file "openshift/sampleweb-bc.yaml".
-		// 	    openshift.create(readFile("openshift/$appName-bc.yaml"))
-		// 	    // Start image build.
-		// 		openshift.selector("bc", appName).startBuild("--from-dir=./deployments").logs("-f")
-		// 		// Tag created image.
-		// 		def result = openshift.tag("$appName:latest", "$appName:$newTag")
-		// 		echo "${result.actions[0].cmd}"
-		// 		echo "${result.actions[0].out}"
-		// 	}
-		// }
-	}
 
 	stage('Deploy to Dev') {
 		
-		echo "Deploying image ${newTag}"
+		echo "Deploy image ${newTag}"
 		sh "${mvnCmd} clean package -Dquarkus.kubernetes.deploy=true -DskipTests"
 
-		// Do deploy the target.
-		// openshift.withCluster() {
-		// 	openshift.withProject(devPrj) {
-		// 		// Deploy created image.
-		// 	    def created = openshift.newApp("--name=$appName", "$devPrj/$appName:$newTag")
-		// 		echo "${created.actions[0].cmd}"
-		// 		echo "${created.actions[0].out}"
-
-		// 		// Expose service.
-		// 		created.narrow("svc").expose()
-
-		// 		// Wait and print status deployment.
-		// 		def dc = created.narrow("dc")
-		// 		dc.rollout().status("-w")
-		// 	}
-		// }
 	}
 }
 

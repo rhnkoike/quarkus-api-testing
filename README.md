@@ -422,7 +422,7 @@ Hibernate ORM拡張のquickstartからサンプルアプリを拝借します。
 
 resourceフォルダに以下のリソースファイルを追加します。  
 このSQLファイルはDB初期化時に実行されます。
-- [import.sql](./src/main/resource/import.sql)
+- [import.sql](./src/main/resources/import.sql)
 
 application.propertiesに以下の定義を追加します。  
 DB接続情報および初期化のための設定になります。
